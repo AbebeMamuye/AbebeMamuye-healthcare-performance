@@ -81,7 +81,21 @@ def init_database():
             ('cbhi', hash_password('CBHI@2024'), 'Department Head', 'CBHI', 'CBHI Department'),
             ('finance', hash_password('Finance@2024'), 'Department Head', 'Finance', 'Finance Department'),
             ('plan', hash_password('Plan@2024'), 'Department Head', 'Plan', 'Plan Department'),
-            ('wt', hash_password('WT@2024'), 'Department Head', 'WT', 'WT Department')
+            ('wt', hash_password('WT@2024'), 'Department Head', 'WT', 'WT Department'),
+            ('medical', hash_password('Medical@2024'), 'Department Head', 'Medical Service', 'Medical Service Department'),
+            ('rmh', hash_password('RMH@2024'), 'Department Head', 'RMH', 'RMH Department'),
+            ('pharmacy', hash_password('Pharmacy@2024'), 'Department Head', 'Pharmacy & Logistic', 'Pharmacy & Logistic Department'),
+            ('ultrasound', hash_password('Ultrasound@2024'), 'Department Head', 'Ultrasound', 'Ultrasound Department'),
+            ('apts', hash_password('APTS@2024'), 'Department Head', 'APTS', 'APTS Department'),
+            ('community_pharmacy', hash_password('CommunityPharmacy@2024'), 'Department Head', 'Community Pharmacy', 'Community Pharmacy Department'),
+            ('dm_test', hash_password('DMTest@2024'), 'Department Head', 'DM Test', 'DM Test Department'),
+            ('full_emr', hash_password('FullEMR@2024'), 'Department Head', 'Full EMR', 'Full EMR Department'),
+            ('epi_modernization', hash_password('EPIModernization@2024'), 'Department Head', 'EPI Modernization', 'EPI Modernization Department'),
+            ('zero_dose', hash_password('ZeroDose@2024'), 'Department Head', 'Zero Dose', 'Zero Dose Department'),
+            ('multi_sectoral', hash_password('MultiSectoral@2024'), 'Department Head', 'Multi-Sectoral', 'Multi-Sectoral Department'),
+            ('cash_program', hash_password('CashProgram@2024'), 'Department Head', 'Cash Program', 'Cash Program Department'),
+            ('hygiene', hash_password('Hygiene@2024'), 'Department Head', 'Hygiene & Sanitation', 'Hygiene & Sanitation Department'),
+            ('hiv_sti', hash_password('HIVSTI@2024'), 'Department Head', 'HIV/STI', 'HIV/STI Department')
         ]
         
         for user in default_users:
@@ -163,6 +177,8 @@ def calculate_scores(data):
         data.get('hygiene_sanitation', 0) +
         data.get('hiv_sti', 0)
     )
+    
+    # Total points: 37.5 + 20 + 25 + 22.5 = 105 points
     
     total_score = medical_pharmacy + prevention_disease + admin_finance + innovation_quality
     percentage_score = (total_score / 105) * 100
@@ -264,7 +280,21 @@ def department_head_interface(department, username):
         'CBHI': {'cbhi': {'label': 'CBHI', 'max': 10}},
         'Finance': {'finance': {'label': 'Finance', 'max': 5}},
         'Plan': {'plan': {'label': 'Plan', 'max': 5}},
-        'WT': {'wt': {'label': 'WT', 'max': 5}}
+        'WT': {'wt': {'label': 'WT', 'max': 5}},
+        'Medical Service': {'medical_service': {'label': 'Medical Service', 'max': 15}},
+        'RMH': {'rmh': {'label': 'RMH', 'max': 10}},
+        'Pharmacy & Logistic': {'pharmacy_logistic': {'label': 'Pharmacy & Logistic', 'max': 5}},
+        'Ultrasound': {'ultrasound': {'label': 'Ultrasound', 'max': 2.5}},
+        'APTS': {'apts': {'label': 'APTS', 'max': 2.5}},
+        'Community Pharmacy': {'community_pharmacy': {'label': 'Community Pharmacy', 'max': 2.5}},
+        'DM Test': {'dm_test': {'label': 'DM Test', 'max': 2.5}},
+        'Full EMR': {'full_emr': {'label': 'Full EMR', 'max': 5}},
+        'EPI Modernization': {'epi_modernization': {'label': 'EPI Modernization', 'max': 5}},
+        'Zero Dose': {'zero_dose': {'label': 'Zero Dose', 'max': 5}},
+        'Multi-Sectoral': {'multi_sectoral': {'label': 'Multi-Sectoral', 'max': 2.5}},
+        'Cash Program': {'cash_program': {'label': 'Cash Program', 'max': 5}},
+        'Hygiene & Sanitation': {'hygiene_sanitation': {'label': 'Hygiene & Sanitation', 'max': 5}},
+        'HIV/STI': {'hiv_sti': {'label': 'HIV/STI', 'max': 5}}
     }
     
     if department in column_info:
