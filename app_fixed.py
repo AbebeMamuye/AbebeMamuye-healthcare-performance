@@ -628,16 +628,23 @@ def department_head_interface(department, username):
     quarter_info = ETHIOPIAN_QUARTERS[selected_quarter]
     st.info(f"📅 **Selected Period:** Ethiopian Year {selected_year} - {selected_quarter} ({quarter_info['months']})")
     
+    # DEBUG: Show what we're about to generate
+    st.info(f"🔍 DEBUG: About to generate forms for {len(user_columns)} columns: {user_columns}")
+    
     # Dynamic form generation for each column
-    for column_name in user_columns:
+    for idx, column_name in enumerate(user_columns):
         column_info = COLUMN_INFO.get(column_name)
         if not column_info:
+            st.error(f"❌ No column info found for '{column_name}'")
             continue
             
         st.subheader(f"📝 Enter {column_info['label']} Data")
+        st.info(f"🔍 DEBUG: Generating form for column '{column_name}' (idx: {idx})")
         
         # Get all woredas
         woredas = get_woredas()
+        st.info(f"🔍 DEBUG: Found {len(woredas)} woredas: {woredas[:3]}...")
+        
         input_data = {}
         
         # Create dynamic number inputs for all woredas
@@ -651,11 +658,12 @@ def department_head_interface(department, username):
                     max_value=float(column_info['max']),
                     value=0.0,
                     step=0.1,
-                    key=f"{column_name}_{woreda}_{username}"  # Unique key per user
+                    key=f"{column_name}_{woreda}_{username}_{selected_year}_{selected_quarter}"  # Unique key
                 )
         
         # Save button for this column
-        if st.button(f"💾 Save {column_info['label']} Data", use_container_width=True, key=f"save_{column_name}"):
+        if st.button(f"💾 Save {column_info['label']} Data", use_container_width=True, key=f"save_{column_name}_{selected_year}_{selected_quarter}"):
+            st.info(f"🔍 DEBUG: Save button clicked for {column_info['label']}")
             success_count = 0
             error_count = 0
             
@@ -666,6 +674,7 @@ def department_head_interface(department, username):
             for i, (woreda, value) in enumerate(input_data.items()):
                 try:
                     data = {column_name: value}
+                    st.info(f"🔍 DEBUG: Saving {woreda} = {value}")
                     if save_performance_data(woreda, department, data, username, selected_year, selected_quarter):
                         success_count += 1
                     else:
