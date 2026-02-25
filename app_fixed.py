@@ -170,16 +170,16 @@ def calculate_scores(data):
     # Innovation & Quality (22.5 pts)
     innovation_quality = (
         data.get('full_emr', 0) +  # 5 pts
-        data.get('epi_modernization', 0) +  # 5 pts
-        data.get('zero_dose', 0) +  # 5 pts
+        data.get('epi_modernization', 0) +  # 2.5 pts (reduced from 5)
+        data.get('zero_dose', 0) +  # 2.5 pts (reduced from 5)
         data.get('multi_sectoral', 0) +  # 2.5 pts
-        data.get('cash_program', 0) +  # 2.5 pts (reduced from 5)
-        data.get('hygiene_sanitation', 0) +  # 2.5 pts (reduced from 5)
-        data.get('hiv_sti', 0)  # 5 pts
+        data.get('cash_program', 0) +  # 2.5 pts
+        data.get('hygiene_sanitation', 0) +  # 5 pts (increased from 2.5)
+        data.get('hiv_sti', 0)  # 5 pts (increased from 2.5)
     )
     
     # Total points: 37.5 + 20 + 25 + 22.5 = 105 points
-    # Innovation & Quality breakdown: 5 + 5 + 5 + 2.5 + 2.5 + 2.5 + 5 = 22.5 pts ✅
+    # Innovation & Quality breakdown: 5 + 2.5 + 2.5 + 2.5 + 2.5 + 5 + 5 = 22.5 pts ✅
     
     total_score = medical_pharmacy + prevention_disease + admin_finance + innovation_quality
     percentage_score = (total_score / 105) * 100
@@ -290,12 +290,12 @@ def department_head_interface(department, username):
         'Community Pharmacy': {'community_pharmacy': {'label': 'Community Pharmacy', 'max': 2.5}},
         'DM Test': {'dm_test': {'label': 'DM Test', 'max': 2.5}},
         'Full EMR': {'full_emr': {'label': 'Full EMR', 'max': 5}},
-        'EPI Modernization': {'epi_modernization': {'label': 'EPI Modernization', 'max': 5}},
-        'Zero Dose': {'zero_dose': {'label': 'Zero Dose', 'max': 5}},
+        'EPI Modernization': {'epi_modernization': {'label': 'EPI Modernization', 'max': 2.5}},  # Reduced from 5 to 2.5
+        'Zero Dose': {'zero_dose': {'label': 'Zero Dose', 'max': 2.5}},  # Reduced from 5 to 2.5
         'Multi-Sectoral': {'multi_sectoral': {'label': 'Multi-Sectoral', 'max': 2.5}},
-        'Cash Program': {'cash_program': {'label': 'Cash Program', 'max': 2.5}},  # Reduced from 5 to 2.5
-        'Hygiene & Sanitation': {'hygiene_sanitation': {'label': 'Hygiene & Sanitation', 'max': 2.5}},  # Reduced from 5 to 2.5
-        'HIV/STI': {'hiv_sti': {'label': 'HIV/STI', 'max': 5}}
+        'Cash Program': {'cash_program': {'label': 'Cash Program', 'max': 2.5}},
+        'Hygiene & Sanitation': {'hygiene_sanitation': {'label': 'Hygiene & Sanitation', 'max': 5}},  # Increased from 2.5 to 5
+        'HIV/STI': {'hiv_sti': {'label': 'HIV/STI', 'max': 5}}  # Increased from 2.5 to 5
     }
     
     if department in column_info:
