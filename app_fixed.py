@@ -471,7 +471,7 @@ def get_performance_data(ethiopian_year=None, quarter=None):
         st.error(f"Error fetching performance data: {str(e)}")
         return pd.DataFrame()
 
-# Department Head Interface - COMPLETE REWRITE
+# Department Head Interface - CLEAN WORKING VERSION
 def department_head_interface(department, username):
     st.title(f"📊 {department} Data Entry")
     st.markdown(f"**Department:** {department}")
@@ -479,9 +479,6 @@ def department_head_interface(department, username):
     
     # Store user department in session state for filtering
     st.session_state.user_dept = department
-    
-    # DEBUG: Show what department we received
-    st.info(f"🔍 DEBUG: Received department = '{department}' (type: {type(department)})")
     
     # Define department to column mappings
     DEPARTMENT_COLUMNS = {
@@ -535,68 +532,24 @@ def department_head_interface(department, username):
         'hiv_sti': {'label': 'HIV/STI', 'max': 5}
     }
     
-    # DEBUG: Show all available departments
-    st.info(f"🔍 DEBUG: Available departments = {list(DEPARTMENT_COLUMNS.keys())}")
+    # Get columns for this user's department - SIMPLIFIED MATCHING
+    user_columns = DEPARTMENT_COLUMNS.get(department, [])
     
-    # Flexible matching - try exact match first, then partial matching
-    user_columns = []
-    matched_department = None
-    
-    # 1. Try exact match
-    if department in DEPARTMENT_COLUMNS:
-        user_columns = DEPARTMENT_COLUMNS[department]
-        matched_department = department
-        st.success(f"🔍 DEBUG: Exact match found for '{department}'")
-    else:
-        # 2. Try case-insensitive match
-        dept_lower = department.lower().strip()
+    # If exact match fails, try case-insensitive
+    if not user_columns:
         for dept_key, columns in DEPARTMENT_COLUMNS.items():
-            if dept_key.lower().strip() == dept_lower:
+            if dept_key.lower() == department.lower():
                 user_columns = columns
-                matched_department = dept_key
-                st.success(f"🔍 DEBUG: Case-insensitive match found: '{department}' → '{dept_key}'")
                 break
-        
-        # 3. Try partial matching (contains)
-        if not user_columns:
-            for dept_key, columns in DEPARTMENT_COLUMNS.items():
-                if dept_lower in dept_key.lower() or dept_key.lower() in dept_lower:
-                    user_columns = columns
-                    matched_department = dept_key
-                    st.success(f"🔍 DEBUG: Partial match found: '{department}' → '{dept_key}'")
-                    break
-    
-    # DEBUG: Show matching results
-    st.info(f"🔍 DEBUG: Matched department = '{matched_department}', Columns = {user_columns}")
     
     if not user_columns:
-        st.error(f"❌ No valid data elements assigned to this user. Department '{department}' not found.")
-        st.warning("Available departments:")
+        st.error(f"❌ Department '{department}' not found. Please contact administrator.")
+        st.write("Available departments:")
         for dept in DEPARTMENT_COLUMNS.keys():
             st.write(f"- {dept}")
-        
-        # Additional debugging info
-        st.error("🔍 DEBUGGING INFO:")
-        st.write(f"Input department: '{department}'")
-        st.write(f"Input department (lower): '{department.lower().strip()}'")
-        st.write(f"Input department length: {len(department)}")
-        st.write(f"Input department repr: {repr(department)}")
-        
-        # Show database department for this user
-        try:
-            conn = sqlite3.connect('healthcare_performance.db', check_same_thread=False)
-            cursor = conn.cursor()
-            cursor.execute('SELECT department FROM users WHERE username = ?', (username,))
-            result = cursor.fetchone()
-            if result:
-                st.write(f"Database department for {username}: '{result[0]}' (repr: {repr(result[0])})")
-            conn.close()
-        except Exception as e:
-            st.error(f"Database error: {str(e)}")
-        
         return
     
-    st.success(f"✅ Found {len(user_columns)} data elements for {department}")
+    st.success(f"✅ Ready to enter data for {department}")
     
     # Ethiopian Fiscal Year and Quarter Selection
     st.markdown("---")
@@ -628,23 +581,16 @@ def department_head_interface(department, username):
     quarter_info = ETHIOPIAN_QUARTERS[selected_quarter]
     st.info(f"📅 **Selected Period:** Ethiopian Year {selected_year} - {selected_quarter} ({quarter_info['months']})")
     
-    # DEBUG: Show what we're about to generate
-    st.info(f"🔍 DEBUG: About to generate forms for {len(user_columns)} columns: {user_columns}")
-    
     # Dynamic form generation for each column
-    for idx, column_name in enumerate(user_columns):
+    for column_name in user_columns:
         column_info = COLUMN_INFO.get(column_name)
         if not column_info:
-            st.error(f"❌ No column info found for '{column_name}'")
             continue
             
         st.subheader(f"📝 Enter {column_info['label']} Data")
-        st.info(f"🔍 DEBUG: Generating form for column '{column_name}' (idx: {idx})")
         
         # Get all woredas
         woredas = get_woredas()
-        st.info(f"🔍 DEBUG: Found {len(woredas)} woredas: {woredas[:3]}...")
-        
         input_data = {}
         
         # Create dynamic number inputs for all woredas
@@ -658,12 +604,11 @@ def department_head_interface(department, username):
                     max_value=float(column_info['max']),
                     value=0.0,
                     step=0.1,
-                    key=f"{column_name}_{woreda}_{username}_{selected_year}_{selected_quarter}"  # Unique key
+                    key=f"{column_name}_{woreda}_{username}_{selected_year}_{selected_quarter}"
                 )
         
         # Save button for this column
         if st.button(f"💾 Save {column_info['label']} Data", use_container_width=True, key=f"save_{column_name}_{selected_year}_{selected_quarter}"):
-            st.info(f"🔍 DEBUG: Save button clicked for {column_info['label']}")
             success_count = 0
             error_count = 0
             
@@ -674,7 +619,6 @@ def department_head_interface(department, username):
             for i, (woreda, value) in enumerate(input_data.items()):
                 try:
                     data = {column_name: value}
-                    st.info(f"🔍 DEBUG: Saving {woreda} = {value}")
                     if save_performance_data(woreda, department, data, username, selected_year, selected_quarter):
                         success_count += 1
                     else:
