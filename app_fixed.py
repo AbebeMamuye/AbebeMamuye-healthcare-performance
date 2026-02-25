@@ -8,25 +8,24 @@ import hashlib
 from datetime import datetime
 import os
 
-# Custom CSS to hide the Streamlit logo, header, and footer
+# Custom CSS to hide ALL Streamlit branding elements
 hide_st_style = """
 <style>
+/* Hide main menu hamburger icon */
 #MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
-</style>
-"""
-st.markdown(hide_st_style, unsafe_allow_html=True)
 
-# Custom CSS to hide Streamlit header, footer, and main menu branding
-st.markdown("""
-<style>
-/* Hide Streamlit header */
+/* Hide footer */
+footer {visibility: hidden;}
+
+/* Hide header */
+header {visibility: hidden;}
+
+/* Hide Streamlit's default header */
 [data-testid="stHeader"] {
     display: none;
 }
 
-/* Hide Streamlit footer */
+/* Hide Streamlit's default footer */
 [data-testid="stFooter"] {
     display: none;
 }
@@ -46,7 +45,22 @@ st.markdown("""
     display: none;
 }
 
-/* Custom sidebar header */
+/* Hide any remaining Streamlit branding */
+.stDeployButton {
+    display: none;
+}
+
+/* Hide the Streamlit toolbar */
+[data-testid="stToolbar"] {
+    display: none;
+}
+
+/* Remove Streamlit's default footer spacing */
+.main .block-container {
+    padding-bottom: 2rem;
+}
+
+/* Custom sidebar header styling */
 .custom-sidebar-header {
     background-color: #1f77b4;
     color: white;
@@ -56,17 +70,13 @@ st.markdown("""
     margin-bottom: 20px;
 }
 
-/* Hide any remaining Streamlit branding */
+/* Hide any remaining Streamlit branding text */
 .streamlit-container .main .block-container {
     padding-top: 2rem;
 }
-
-/* Remove Streamlit's default footer spacing */
-.main .block-container {
-    padding-bottom: 2rem;
-}
 </style>
-""", unsafe_allow_html=True)
+"""
+st.markdown(hide_st_style, unsafe_allow_html=True)
 
 # Configure Streamlit for wide mode
 st.set_page_config(
@@ -138,10 +148,10 @@ def init_database():
         user_count = cursor.fetchone()[0]
         
         if user_count == 0:
-            # Insert default users with correct credentials
+            # Insert default users with exact department mappings
             default_users = [
-                ('admin', hash_password('admin@2018'), 'Admin', 'Administration', 'System Administrator'),
-                ('superadmin', hash_password('super@2024'), 'Super Admin', 'Administration', 'Super Administrator'),
+                ('admin', hash_password('admin@2018'), 'Admin', 'All', 'System Administrator'),
+                ('superadmin', hash_password('super@2024'), 'Super Admin', 'All', 'Super Administrator'),
                 ('epi', hash_password('EPI@2024'), 'Department Head', 'EPI', 'EPI Department'),
                 ('tb', hash_password('TB@2024'), 'Department Head', 'TB & Leprosy', 'TB & Leprosy Department'),
                 ('child health', hash_password('Child Health@2024'), 'Department Head', 'Child Health', 'Child Health Department'),
@@ -388,41 +398,16 @@ def department_head_interface(department, username):
     st.markdown(f"**Department:** {department}")
     st.markdown(f"**Logged in as:** {username}")
     
+    # Check if user is Super Admin - they can see ALL forms
+    if st.session_state.role == 'Super Admin':
+        st.success("👑 Super Admin Access: You can enter data for ALL departments")
+        show_all_department_forms(username)
+        return
+    
     # Debug information
     st.info(f"🔍 Debug: User '{username}' assigned to department '{department}'")
     
-    # Department name mapping for exact matching
-    department_mapping = {
-        # Exact department names from database
-        'EPI': 'EPI',
-        'TB & Leprosy': 'TB & Leprosy', 
-        'Child Health': 'Child Health',
-        'PHEM': 'PHEM',
-        'CBHI': 'CBHI',
-        'Finance': 'Finance',
-        'Plan': 'Plan',
-        'WT': 'WT',
-        'Medical Service': 'Medical Service',
-        'RMH': 'RMH',
-        'Pharmacy & Logistic': 'Pharmacy & Logistic',
-        'Ultrasound': 'Ultrasound',
-        'APTS': 'APTS',
-        'Community Pharmacy': 'Community Pharmacy',
-        'DM Test': 'DM Test',
-        'Full EMR': 'Full EMR',
-        'EPI Modernization': 'EPI Modernization',
-        'Zero Dose': 'Zero Dose',
-        'Multi-Sectoral': 'Multi-Sectoral',
-        'Cash Program': 'Cash Program',
-        'Hygiene & Sanitation': 'Hygiene & Sanitation',
-        'HIV/STI': 'HIV/STI'
-    }
-    
-    # Normalize department name for matching
-    normalized_dept = department_mapping.get(department, department)
-    st.info(f"🔍 Normalized department: '{normalized_dept}'")
-    
-    # Column info for department
+    # Flexible department matching - search for columns containing department name
     column_info = {
         'EPI': {'epi': {'label': 'EPI', 'max': 5}},
         'TB & Leprosy': {'tb_leprosy': {'label': 'TB & Leprosy', 'max': 5}},
@@ -440,21 +425,109 @@ def department_head_interface(department, username):
         'Community Pharmacy': {'community_pharmacy': {'label': 'Community Pharmacy', 'max': 2.5}},
         'DM Test': {'dm_test': {'label': 'DM Test', 'max': 2.5}},
         'Full EMR': {'full_emr': {'label': 'Full EMR', 'max': 5}},
-        'EPI Modernization': {'epi_modernization': {'label': 'EPI Modernization', 'max': 2.5}},  # Reduced from 5 to 2.5
-        'Zero Dose': {'zero_dose': {'label': 'Zero Dose', 'max': 2.5}},  # Reduced from 5 to 2.5
+        'EPI Modernization': {'epi_modernization': {'label': 'EPI Modernization', 'max': 2.5}},
+        'Zero Dose': {'zero_dose': {'label': 'Zero Dose', 'max': 2.5}},
         'Multi-Sectoral': {'multi_sectoral': {'label': 'Multi-Sectoral', 'max': 2.5}},
         'Cash Program': {'cash_program': {'label': 'Cash Program', 'max': 2.5}},
-        'Hygiene & Sanitation': {'hygiene_sanitation': {'label': 'Hygiene & Sanitation', 'max': 5}},  # Increased from 2.5 to 5
-        'HIV/STI': {'hiv_sti': {'label': 'HIV/STI', 'max': 5}}  # Increased from 2.5 to 5
+        'Hygiene & Sanitation': {'hygiene_sanitation': {'label': 'Hygiene & Sanitation', 'max': 5}},
+        'HIV/STI': {'hiv_sti': {'label': 'HIV/STI', 'max': 5}}
     }
     
-    # Check if department exists in column_info
-    if normalized_dept in column_info:
-        st.success(f"✅ Department '{normalized_dept}' found in system!")
-        col_info = column_info[normalized_dept]
+    # Flexible matching - find departments that contain the user's department name
+    matched_departments = []
+    user_dept_lower = department.lower()
+    
+    for dept_name in column_info.keys():
+        if user_dept_lower in dept_name.lower() or dept_name.lower() in user_dept_lower:
+            matched_departments.append(dept_name)
+    
+    # Special case for exact matches
+    if department in column_info:
+        matched_departments = [department]
+    
+    if matched_departments:
+        st.success(f"✅ Found {len(matched_departments)} matching department(s): {', '.join(matched_departments)}")
         
+        for matched_dept in matched_departments:
+            col_info = column_info[matched_dept]
+            for key, info in col_info.items():
+                st.subheader(f"📝 Enter {info['label']} Data")
+                
+                woredas = get_woredas()
+                input_data = {}
+                
+                for woreda in woredas:
+                    input_data[woreda] = st.number_input(
+                        f"{woreda} (Max: {info['max']})",
+                        min_value=0.0,
+                        max_value=float(info['max']),
+                        value=0.0,
+                        step=0.1,
+                        key=f"{key}_{woreda}"
+                    )
+                
+                if st.button(f"� Save {info['label']} Data", use_container_width=True):
+                    success_count = 0
+                    for woreda, value in input_data.items():
+                        data = {key: value}
+                        if save_performance_data(woreda, matched_dept, data, username):
+                            success_count += 1
+                    
+                    if success_count > 0:
+                        st.success(f"Saved {info['label']} data for {success_count} Woredas!")
+                    else:
+                        st.error("Failed to save data")
+                
+                st.markdown("---")
+    else:
+        st.error(f"❌ No matching departments found for '{department}'!")
+        st.warning("Available departments:")
+        for dept in column_info.keys():
+            st.write(f"- {dept}")
+        
+        # Show search results for debugging
+        st.info(f"🔍 Search results for '{department}':")
+        for dept in column_info.keys():
+            if user_dept_lower in dept_name.lower() or dept_name.lower() in user_dept_lower:
+                st.write(f"✅ Matched: {dept}")
+            else:
+                st.write(f"❌ No match: {dept}")
+
+# Function for Super Admin to see all forms
+def show_all_department_forms(username):
+    """Show all department forms for Super Admin"""
+    column_info = {
+        'EPI': {'epi': {'label': 'EPI', 'max': 5}},
+        'TB & Leprosy': {'tb_leprosy': {'label': 'TB & Leprosy', 'max': 5}},
+        'Child Health': {'child_health': {'label': 'Child Health', 'max': 5}},
+        'PHEM': {'phem': {'label': 'PHEM', 'max': 5}},
+        'CBHI': {'cbhi': {'label': 'CBHI', 'max': 10}},
+        'Finance': {'finance': {'label': 'Finance', 'max': 5}},
+        'Plan': {'plan': {'label': 'Plan', 'max': 5}},
+        'WT': {'wt': {'label': 'WT', 'max': 5}},
+        'Medical Service': {'medical_service': {'label': 'Medical Service', 'max': 15}},
+        'RMH': {'rmh': {'label': 'RMH', 'max': 10}},
+        'Pharmacy & Logistic': {'pharmacy_logistic': {'label': 'Pharmacy & Logistic', 'max': 5}},
+        'Ultrasound': {'ultrasound': {'label': 'Ultrasound', 'max': 2.5}},
+        'APTS': {'apts': {'label': 'APTS', 'max': 2.5}},
+        'Community Pharmacy': {'community_pharmacy': {'label': 'Community Pharmacy', 'max': 2.5}},
+        'DM Test': {'dm_test': {'label': 'DM Test', 'max': 2.5}},
+        'Full EMR': {'full_emr': {'label': 'Full EMR', 'max': 5}},
+        'EPI Modernization': {'epi_modernization': {'label': 'EPI Modernization', 'max': 2.5}},
+        'Zero Dose': {'zero_dose': {'label': 'Zero Dose', 'max': 2.5}},
+        'Multi-Sectoral': {'multi_sectoral': {'label': 'Multi-Sectoral', 'max': 2.5}},
+        'Cash Program': {'cash_program': {'label': 'Cash Program', 'max': 2.5}},
+        'Hygiene & Sanitation': {'hygiene_sanitation': {'label': 'Hygiene & Sanitation', 'max': 5}},
+        'HIV/STI': {'hiv_sti': {'label': 'HIV/STI', 'max': 5}}
+    }
+    
+    # Department selector for Super Admin
+    selected_dept = st.selectbox("🏥 Select Department to Enter Data:", list(column_info.keys()))
+    
+    if selected_dept:
+        col_info = column_info[selected_dept]
         for key, info in col_info.items():
-            st.subheader(f"📝 Enter {info['label']} Data")
+            st.subheader(f"📝 Enter {info['label']} Data (Super Admin Access)")
             
             woredas = get_woredas()
             input_data = {}
@@ -466,41 +539,22 @@ def department_head_interface(department, username):
                     max_value=float(info['max']),
                     value=0.0,
                     step=0.1,
-                    key=f"{key}_{woreda}"
+                    key=f"admin_{key}_{woreda}"
                 )
             
-            if st.button(f"💾 Save {info['label']} Data", use_container_width=True):
+            if st.button(f"💾 Save {info['label']} Data", use_container_width=True, type="primary"):
                 success_count = 0
                 for woreda, value in input_data.items():
                     data = {key: value}
-                    if save_performance_data(woreda, normalized_dept, data, username):
+                    if save_performance_data(woreda, selected_dept, data, username):
                         success_count += 1
                 
                 if success_count > 0:
-                    st.success(f"Saved {info['label']} data for {success_count} Woredas!")
+                    st.success(f"✅ Saved {info['label']} data for {success_count} Woredas!")
                 else:
                     st.error("Failed to save data")
             
             st.markdown("---")
-    else:
-        st.error(f"❌ Department '{normalized_dept}' not found in available departments!")
-        st.warning("Available departments:")
-        for dept in column_info.keys():
-            st.write(f"- {dept}")
-        
-        # Show all department mappings for debugging
-        st.info("Department mappings from database:")
-        try:
-            conn = sqlite3.connect('healthcare_performance.db', check_same_thread=False)
-            cursor = conn.cursor()
-            cursor.execute('SELECT DISTINCT department FROM users WHERE role = "Department Head"')
-            departments = cursor.fetchall()
-            conn.close()
-            
-            for dept in departments:
-                st.write(f"- {dept[0]}")
-        except Exception as e:
-            st.error(f"Error fetching departments: {str(e)}")
     
     # Show current rankings
     st.subheader("📋 Current Rankings")
