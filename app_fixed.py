@@ -471,16 +471,13 @@ def get_performance_data(ethiopian_year=None, quarter=None):
         st.error(f"Error fetching performance data: {str(e)}")
         return pd.DataFrame()
 
-# Department Head Interface - CLEAN WORKING VERSION
+# Department Head Interface - SIMPLE & CLEAN
 def department_head_interface(department, username):
     st.title(f"📊 {department} Data Entry")
     st.markdown(f"**Department:** {department}")
     st.markdown(f"**Logged in as:** {username}")
     
-    # Store user department in session state for filtering
-    st.session_state.user_dept = department
-    
-    # Define department to column mappings
+    # Department to columns mapping
     DEPARTMENT_COLUMNS = {
         'EPI': ['epi'],
         'TB & Leprosy': ['tb_leprosy'],
@@ -506,7 +503,7 @@ def department_head_interface(department, username):
         'HIV/STI': ['hiv_sti']
     }
     
-    # Define column display info
+    # Column information
     COLUMN_INFO = {
         'epi': {'label': 'EPI', 'max': 5},
         'tb_leprosy': {'label': 'TB & Leprosy', 'max': 5},
@@ -532,69 +529,62 @@ def department_head_interface(department, username):
         'hiv_sti': {'label': 'HIV/STI', 'max': 5}
     }
     
-    # Get columns for this user's department - SIMPLIFIED MATCHING
+    # Get user columns
     user_columns = DEPARTMENT_COLUMNS.get(department, [])
     
-    # If exact match fails, try case-insensitive
+    # Try case-insensitive match if exact fails
     if not user_columns:
         for dept_key, columns in DEPARTMENT_COLUMNS.items():
             if dept_key.lower() == department.lower():
                 user_columns = columns
                 break
     
+    # Check if department found
     if not user_columns:
-        st.error(f"❌ Department '{department}' not found. Please contact administrator.")
+        st.error(f"Department '{department}' not found.")
         st.write("Available departments:")
         for dept in DEPARTMENT_COLUMNS.keys():
             st.write(f"- {dept}")
         return
     
-    st.success(f"✅ Ready to enter data for {department}")
-    
-    # Ethiopian Fiscal Year and Quarter Selection
+    # Ethiopian Year and Quarter Selection
     st.markdown("---")
-    st.subheader("📅 Ethiopian Fiscal Year Selection")
+    st.subheader("📅 Select Period")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Ethiopian Year Selection
         ethiopian_years = get_ethiopian_year_options()
         selected_year = st.selectbox(
-            "📆 Ethiopian Year",
+            "Ethiopian Year",
             options=ethiopian_years,
-            index=ethiopian_years.index(str(get_current_ethiopian_year())),
-            key="ethiopian_year"
+            index=0
         )
     
     with col2:
-        # Quarter Selection
         quarter_options = list(ETHIOPIAN_QUARTERS.keys())
         selected_quarter = st.selectbox(
-            "📊 Quarter",
+            "Quarter",
             options=quarter_options,
-            index=quarter_options.index(get_current_ethiopian_quarter()),
-            key="ethiopian_quarter"
+            index=0
         )
     
-    # Show selected period info
     quarter_info = ETHIOPIAN_QUARTERS[selected_quarter]
-    st.info(f"📅 **Selected Period:** Ethiopian Year {selected_year} - {selected_quarter} ({quarter_info['months']})")
+    st.info(f"**Period:** Ethiopian Year {selected_year} - {selected_quarter}")
     
-    # Dynamic form generation for each column
+    # Data Entry Forms
     for column_name in user_columns:
         column_info = COLUMN_INFO.get(column_name)
         if not column_info:
             continue
             
-        st.subheader(f"📝 Enter {column_info['label']} Data")
+        st.subheader(f"📝 {column_info['label']} Data")
         
-        # Get all woredas
+        # Get woredas and create inputs
         woredas = get_woredas()
         input_data = {}
         
-        # Create dynamic number inputs for all woredas
-        cols = st.columns(3)  # 3-column layout
+        cols = st.columns(3)
         for i, woreda in enumerate(woredas):
             col = cols[i % 3]
             with col:
@@ -604,48 +594,27 @@ def department_head_interface(department, username):
                     max_value=float(column_info['max']),
                     value=0.0,
                     step=0.1,
-                    key=f"{column_name}_{woreda}_{username}_{selected_year}_{selected_quarter}"
+                    key=f"{column_name}_{woreda}_{username}"
                 )
         
-        # Save button for this column
-        if st.button(f"💾 Save {column_info['label']} Data", use_container_width=True, key=f"save_{column_name}_{selected_year}_{selected_quarter}"):
+        # Save button
+        if st.button(f"Save {column_info['label']} Data", use_container_width=True):
             success_count = 0
-            error_count = 0
             
-            # Progress tracking
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            for i, (woreda, value) in enumerate(input_data.items()):
+            for woreda, value in input_data.items():
                 try:
                     data = {column_name: value}
                     if save_performance_data(woreda, department, data, username, selected_year, selected_quarter):
                         success_count += 1
-                    else:
-                        error_count += 1
-                except Exception as e:
-                    error_count += 1
-                    st.error(f"Error saving {woreda}: {str(e)}")
-                
-                # Update progress
-                progress = (i + 1) / len(input_data)
-                progress_bar.progress(progress)
-                status_text.text(f"Saving... {i + 1}/{len(input_data)} Woredas")
+                except:
+                    pass
             
-            # Clear progress indicators
-            progress_bar.empty()
-            status_text.empty()
-            
-            # Show results
             if success_count > 0:
-                st.success(f"✅ Successfully saved {column_info['label']} data for {success_count} Woredas!")
-            if error_count > 0:
-                st.error(f"❌ Failed to save data for {error_count} Woredas")
+                st.success(f"Saved data for {success_count} woredas!")
+            else:
+                st.error("Failed to save data")
         
         st.markdown("---")
-    
-    # Show current data summary
-    show_department_data_summary(department)
 
 def show_department_data_summary(department):
     """Show current data summary for the department"""
@@ -689,7 +658,7 @@ def show_department_data_summary(department):
 def admin_dashboard():
     st.title("📊 Admin Dashboard (View Only)")
     st.markdown(f"**Logged in as:** {st.session_state.username}")
-    st.info("👁️ Admin users can view all data but cannot modify. Contact Super Admin for data entry.")
+    st.info("View-only access to all data")
     
     # Show current rankings
     rankings = get_performance_data()
@@ -1051,7 +1020,7 @@ def super_admin_dashboard():
 def admin_dashboard():
     st.title("📊 Admin Dashboard (View Only)")
     st.markdown(f"**Logged in as:** {st.session_state.username}")
-    st.info("👁️ Admin users can view all data but cannot modify. Contact Super Admin for data entry.")
+    st.info("View-only access to all data")
     
     # Ethiopian Fiscal Year and Quarter Filtering
     st.markdown("---")
