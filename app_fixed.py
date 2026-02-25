@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import hashlib
 from datetime import datetime
+import os
 
 # Custom CSS to hide the Streamlit logo, header, and footer
 hide_st_style = """
@@ -79,7 +80,9 @@ st.set_page_config(
 def init_database():
     """Initialize SQLite database with proper error handling for cloud deployment"""
     try:
-        conn = sqlite3.connect('healthcare_performance.db', check_same_thread=False)
+        # Use absolute path for better cloud compatibility
+        db_path = os.path.join(os.getcwd(), 'healthcare_performance.db')
+        conn = sqlite3.connect(db_path, check_same_thread=False)
         cursor = conn.cursor()
         
         # Create users table
@@ -130,42 +133,48 @@ def init_database():
             )
         ''')
         
-        # Clear any existing users to avoid conflicts
-        cursor.execute('DELETE FROM users')
+        # Check if users exist, if not, insert them
+        cursor.execute('SELECT COUNT(*) FROM users')
+        user_count = cursor.fetchone()[0]
         
-        # Insert default users with correct credentials
-        default_users = [
-            ('admin', hash_password('admin@2018'), 'Admin', 'Administration', 'System Administrator'),
-            ('superadmin', hash_password('super@2024'), 'Super Admin', 'Administration', 'Super Administrator'),
-            ('epi', hash_password('EPI@2024'), 'Department Head', 'EPI', 'EPI Department'),
-            ('tb', hash_password('TB@2024'), 'Department Head', 'TB & Leprosy', 'TB & Leprosy Department'),
-            ('child health', hash_password('Child Health@2024'), 'Department Head', 'Child Health', 'Child Health Department'),
-            ('phem', hash_password('PHEM@2024'), 'Department Head', 'PHEM', 'PHEM Department'),
-            ('cbhi', hash_password('CBHI@2024'), 'Department Head', 'CBHI', 'CBHI Department'),
-            ('finance', hash_password('Finance@2024'), 'Department Head', 'Finance', 'Finance Department'),
-            ('plan', hash_password('Plan@2024'), 'Department Head', 'Plan', 'Plan Department'),
-            ('wt', hash_password('WT@2024'), 'Department Head', 'WT', 'WT Department'),
-            ('medical', hash_password('Medical@2024'), 'Department Head', 'Medical Service', 'Medical Service Department'),
-            ('rmh', hash_password('RMH@2024'), 'Department Head', 'RMH', 'RMH Department'),
-            ('pharmacy', hash_password('Pharmacy@2024'), 'Department Head', 'Pharmacy & Logistic', 'Pharmacy & Logistic Department'),
-            ('ultrasound', hash_password('Ultrasound@2024'), 'Department Head', 'Ultrasound', 'Ultrasound Department'),
-            ('apts', hash_password('APTS@2024'), 'Department Head', 'APTS', 'APTS Department'),
-            ('community_pharmacy', hash_password('CommunityPharmacy@2024'), 'Department Head', 'Community Pharmacy', 'Community Pharmacy Department'),
-            ('dm_test', hash_password('DMTest@2024'), 'Department Head', 'DM Test', 'DM Test Department'),
-            ('full_emr', hash_password('FullEMR@2024'), 'Department Head', 'Full EMR', 'Full EMR Department'),
-            ('epi_modernization', hash_password('EPIModernization@2024'), 'Department Head', 'EPI Modernization', 'EPI Modernization Department'),
-            ('zero_dose', hash_password('ZeroDose@2024'), 'Department Head', 'Zero Dose', 'Zero Dose Department'),
-            ('multi_sectoral', hash_password('MultiSectoral@2024'), 'Department Head', 'Multi-Sectoral', 'Multi-Sectoral Department'),
-            ('cash_program', hash_password('CashProgram@2024'), 'Department Head', 'Cash Program', 'Cash Program Department'),
-            ('hygiene', hash_password('Hygiene@2024'), 'Department Head', 'Hygiene & Sanitation', 'Hygiene & Sanitation Department'),
-            ('hiv_sti', hash_password('HIVSTI@2024'), 'Department Head', 'HIV/STI', 'HIV/STI Department')
-        ]
-        
-        for user in default_users:
-            cursor.execute('''
-                INSERT INTO users (username, password, role, department, full_name)
-                VALUES (?, ?, ?, ?, ?)
-            ''', user)
+        if user_count == 0:
+            # Insert default users with correct credentials
+            default_users = [
+                ('admin', hash_password('admin@2018'), 'Admin', 'Administration', 'System Administrator'),
+                ('superadmin', hash_password('super@2024'), 'Super Admin', 'Administration', 'Super Administrator'),
+                ('epi', hash_password('EPI@2024'), 'Department Head', 'EPI', 'EPI Department'),
+                ('tb', hash_password('TB@2024'), 'Department Head', 'TB & Leprosy', 'TB & Leprosy Department'),
+                ('child health', hash_password('Child Health@2024'), 'Department Head', 'Child Health', 'Child Health Department'),
+                ('phem', hash_password('PHEM@2024'), 'Department Head', 'PHEM', 'PHEM Department'),
+                ('cbhi', hash_password('CBHI@2024'), 'Department Head', 'CBHI', 'CBHI Department'),
+                ('finance', hash_password('Finance@2024'), 'Department Head', 'Finance', 'Finance Department'),
+                ('plan', hash_password('Plan@2024'), 'Department Head', 'Plan', 'Plan Department'),
+                ('wt', hash_password('WT@2024'), 'Department Head', 'WT', 'WT Department'),
+                ('medical', hash_password('Medical@2024'), 'Department Head', 'Medical Service', 'Medical Service Department'),
+                ('rmh', hash_password('RMH@2024'), 'Department Head', 'RMH', 'RMH Department'),
+                ('pharmacy', hash_password('Pharmacy@2024'), 'Department Head', 'Pharmacy & Logistic', 'Pharmacy & Logistic Department'),
+                ('ultrasound', hash_password('Ultrasound@2024'), 'Department Head', 'Ultrasound', 'Ultrasound Department'),
+                ('apts', hash_password('APTS@2024'), 'Department Head', 'APTS', 'APTS Department'),
+                ('community_pharmacy', hash_password('CommunityPharmacy@2024'), 'Department Head', 'Community Pharmacy', 'Community Pharmacy Department'),
+                ('dm_test', hash_password('DMTest@2024'), 'Department Head', 'DM Test', 'DM Test Department'),
+                ('full_emr', hash_password('FullEMR@2024'), 'Department Head', 'Full EMR', 'Full EMR Department'),
+                ('epi_modernization', hash_password('EPIModernization@2024'), 'Department Head', 'EPI Modernization', 'EPI Modernization Department'),
+                ('zero_dose', hash_password('ZeroDose@2024'), 'Department Head', 'Zero Dose', 'Zero Dose Department'),
+                ('multi_sectoral', hash_password('MultiSectoral@2024'), 'Department Head', 'Multi-Sectoral', 'Multi-Sectoral Department'),
+                ('cash_program', hash_password('CashProgram@2024'), 'Department Head', 'Cash Program', 'Cash Program Department'),
+                ('hygiene', hash_password('Hygiene@2024'), 'Department Head', 'Hygiene & Sanitation', 'Hygiene & Sanitation Department'),
+                ('hiv_sti', hash_password('HIVSTI@2024'), 'Department Head', 'HIV/STI', 'HIV/STI Department')
+            ]
+            
+            for user in default_users:
+                cursor.execute('''
+                    INSERT INTO users (username, password, role, department, full_name)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', user)
+            
+            st.success("Database initialized with default users!")
+        else:
+            st.info(f"Database already has {user_count} users configured.")
         
         conn.commit()
         conn.close()
@@ -177,6 +186,49 @@ def init_database():
 # Authentication functions
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_login(username, password):
+    """Verify login credentials with debug information"""
+    try:
+        db_path = os.path.join(os.getcwd(), 'healthcare_performance.db')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Hash the password
+        hashed_password = hash_password(password)
+        
+        # Check user credentials
+        cursor.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, hashed_password))
+        user = cursor.fetchone()
+        
+        # Debug: Show all users (remove in production)
+        cursor.execute('SELECT username, role FROM users')
+        all_users = cursor.fetchall()
+        
+        conn.close()
+        
+        if user:
+            return {
+                'success': True,
+                'user': {
+                    'id': user[0],
+                    'username': user[1],
+                    'role': user[3],
+                    'department': user[4],
+                    'full_name': user[5]
+                },
+                'debug': f"Login successful. Found {len(all_users)} users in database."
+            }
+        else:
+            return {
+                'success': False,
+                'debug': f"Login failed. Found {len(all_users)} users in database. Tried username: '{username}'"
+            }
+    except Exception as e:
+        return {
+            'success': False,
+            'debug': f"Database error: {str(e)}"
+        }
 
 def verify_user(username, password):
     try:
@@ -613,17 +665,38 @@ def login_page():
                 username = username.strip()
                 password = password.strip()
                 
-                # Authenticate user
-                result = verify_user(username, password)
-                if result:
+                # Authenticate user with debug information
+                login_result = verify_login(username, password)
+                
+                if login_result['success']:
                     st.session_state.authenticated = True
-                    st.session_state.role = result[0]
-                    st.session_state.department = result[1]
+                    st.session_state.role = login_result['user']['role']
+                    st.session_state.department = login_result['user']['department']
                     st.session_state.username = username
                     st.success(f"Welcome {username}!")
                     st.rerun()
                 else:
                     st.error("❌ Invalid username or password")
+                    # Show debug information in development
+                    st.info(f"Debug: {login_result['debug']}")
+                    
+                    # Show available users for debugging
+                    try:
+                        db_path = os.path.join(os.getcwd(), 'healthcare_performance.db')
+                        conn = sqlite3.connect(db_path)
+                        cursor = conn.cursor()
+                        cursor.execute('SELECT username, role FROM users')
+                        users = cursor.fetchall()
+                        conn.close()
+                        
+                        if users:
+                            st.write("Available users:")
+                            for user in users:
+                                st.write(f"- {user[0]} ({user[1]})")
+                        else:
+                            st.warning("No users found in database!")
+                    except Exception as e:
+                        st.error(f"Could not fetch users: {str(e)}")
 
 # Main application
 def main():
