@@ -140,7 +140,7 @@ def get_woredas():
 
 # Calculate scores
 def calculate_scores(data):
-    # Medical & Pharmacy (37.5 pts)
+    # Medical & Pharmacy (40 pts)
     medical_pharmacy = (
         data.get('medical_service', 0) +
         data.get('rmh', 0) +
@@ -167,22 +167,23 @@ def calculate_scores(data):
         data.get('wt', 0)
     )
     
-    # Innovation & Quality (22.5 pts)
+    # Innovation & Quality (25 pts)
     innovation_quality = (
         data.get('full_emr', 0) +  # 5 pts
-        data.get('epi_modernization', 0) +  # 2.5 pts (reduced from 5)
-        data.get('zero_dose', 0) +  # 2.5 pts (reduced from 5)
+        data.get('epi_modernization', 0) +  # 2.5 pts
+        data.get('zero_dose', 0) +  # 2.5 pts
         data.get('multi_sectoral', 0) +  # 2.5 pts
         data.get('cash_program', 0) +  # 2.5 pts
-        data.get('hygiene_sanitation', 0) +  # 5 pts (increased from 2.5)
-        data.get('hiv_sti', 0)  # 5 pts (increased from 2.5)
+        data.get('hygiene_sanitation', 0) +  # 5 pts
+        data.get('hiv_sti', 0)  # 5 pts
     )
     
-    # Total points: 37.5 + 20 + 25 + 22.5 = 105 points
-    # Innovation & Quality breakdown: 5 + 2.5 + 2.5 + 2.5 + 2.5 + 5 + 5 = 22.5 pts ✅
+    # Total points: 40 + 20 + 25 + 25 = 110 points
+    # Medical & Pharmacy breakdown: 15 + 10 + 5 + 2.5 + 2.5 + 2.5 + 2.5 = 40 pts ✅
+    # Innovation & Quality breakdown: 5 + 2.5 + 2.5 + 2.5 + 2.5 + 5 + 5 = 25 pts ✅
     
     total_score = medical_pharmacy + prevention_disease + admin_finance + innovation_quality
-    percentage_score = (total_score / 105) * 100
+    percentage_score = (total_score / 110) * 100
     
     return total_score, percentage_score
 
@@ -351,10 +352,10 @@ def admin_dashboard():
         col1, col2, col3 = st.columns(3)
         with col1:
             avg_score = rankings['total_score'].mean()
-            st.metric("Average Score", f"{avg_score:.1f}/105")
+            st.metric("Average Score", f"{avg_score:.1f}/110")
         with col2:
             max_score = rankings['total_score'].max()
-            st.metric("Highest Score", f"{max_score:.1f}/105")
+            st.metric("Highest Score", f"{max_score:.1f}/110")
         with col3:
             total_woredas = len(rankings)
             st.metric("Total Woredas", total_woredas)
