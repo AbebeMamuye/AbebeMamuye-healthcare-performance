@@ -985,16 +985,6 @@ def admin_dashboard():
     # Apply custom CSS for conditional formatting
     st.markdown("""
     <style>
-    .dataframe td {
-        font-size: 14px !important;
-        font-weight: bold !important;
-    }
-    .dataframe th {
-        font-size: 16px !important;
-        font-weight: bold !important;
-        background-color: #1f77b4 !important;
-        color: white !important;
-    }
     .high-percentage {
         background-color: #d4edda !important;
         color: #155724 !important;
