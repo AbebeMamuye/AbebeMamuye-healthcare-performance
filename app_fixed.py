@@ -67,7 +67,7 @@ st.set_page_config(
 
 # Database initialization
 def init_database():
-    """Initialize SQLite database with proper error handling"""
+    """Initialize SQLite database with proper error handling for cloud deployment"""
     try:
         conn = sqlite3.connect('healthcare_performance.db', check_same_thread=False)
         cursor = conn.cursor()
@@ -120,7 +120,10 @@ def init_database():
             )
         ''')
         
-        # Insert default users if they don't exist
+        # Clear any existing users to avoid conflicts
+        cursor.execute('DELETE FROM users')
+        
+        # Insert default users with correct credentials
         default_users = [
             ('admin', hash_password('admin@2018'), 'Admin', 'Administration', 'System Administrator'),
             ('superadmin', hash_password('super@2024'), 'Super Admin', 'Administration', 'Super Administrator'),
@@ -150,7 +153,7 @@ def init_database():
         
         for user in default_users:
             cursor.execute('''
-                INSERT OR IGNORE INTO users (username, password, role, department, full_name)
+                INSERT INTO users (username, password, role, department, full_name)
                 VALUES (?, ?, ?, ?, ?)
             ''', user)
         
