@@ -153,25 +153,32 @@ def init_db():
     # Insert default users if not exists
     cursor.execute("SELECT COUNT(*) FROM users")
     if cursor.fetchone()[0] == 0:
-        # Updated users with new credentials and data elements
+        # Updated users with same credentials as app_fixed.py
         users_data = [
-            ("admin", "4421", "Admin", "ADMIN", ""),
-            ("epi", "7634", "Department Head", "EPI", "epi,epi_modernization,zero_dose"),
-            ("pharmacy", "6777", "Department Head", "Pharmacy", "community_pharmacy,apts,pharmacy_logistic"),
-            ("cash", "9096", "Department Head", "Cash", "cash_program,hygiene_sanitation"),
-            ("plan", "8993", "Department Head", "Plan", "full_emr,plan"),
-            ("finace", "1977", "Department Head", "Finance", "cbhi,finance"),
-            ("medical_service", "1900", "Department Head", "Medical Service", "medical_service"),
-            ("rmh", "8878", "Department Head", "RMH", "rmh"),
-            ("ultrasound", "1245", "Department Head", "Ultrasound", "ultrasound"),
-            ("dm_test", "8767", "Department Head", "DM Test", "dm_test"),
-            ("child_health", "3455", "Department Head", "Child Health", "child_health"),
-            ("tb_leprosy", "5443", "Department Head", "TB & Leprosy", "tb_leprosy"),
-            ("phem", "1877", "Department Head", "PHEM", "phem"),
-            ("multi_sectoral", "1833", "Department Head", "Multi-Sectoral", "multi_sectoral"),
-            ("wt", "4511", "Department Head", "WT", "wt"),
-            ("hiv", "6641", "Department Head", "HIV/STI", "hiv_sti"),
-            ("superadmin", "1800", "Super Admin", "SUPER ADMIN", "")
+            ("admin", hash_password("admin@2018"), "Admin", "Administration", "System Administrator"),
+            ("superadmin", hash_password("super@2024"), "Super Admin", "Administration", "Super Administrator"),
+            ("epi", hash_password("EPI@2024"), "Department Head", "EPI", "EPI Department"),
+            ("tb", hash_password("TB@2024"), "Department Head", "TB & Leprosy", "TB & Leprosy Department"),
+            ("child health", hash_password("Child Health@2024"), "Department Head", "Child Health", "Child Health Department"),
+            ("phem", hash_password("PHEM@2024"), "Department Head", "PHEM", "PHEM Department"),
+            ("cbhi", hash_password("CBHI@2024"), "Department Head", "CBHI", "CBHI Department"),
+            ("finance", hash_password("Finance@2024"), "Department Head", "Finance", "Finance Department"),
+            ("plan", hash_password("Plan@2024"), "Department Head", "Plan", "Plan Department"),
+            ("wt", hash_password("WT@2024"), "Department Head", "WT", "WT Department"),
+            ("medical", hash_password("Medical@2024"), "Department Head", "Medical Service", "Medical Service Department"),
+            ("rmh", hash_password("RMH@2024"), "Department Head", "RMH", "RMH Department"),
+            ("pharmacy", hash_password("Pharmacy@2024"), "Department Head", "Pharmacy & Logistic", "Pharmacy & Logistic Department"),
+            ("ultrasound", hash_password("Ultrasound@2024"), "Department Head", "Ultrasound", "Ultrasound Department"),
+            ("apts", hash_password("APTS@2024"), "Department Head", "APTS", "APTS Department"),
+            ("community_pharmacy", hash_password("CommunityPharmacy@2024"), "Department Head", "Community Pharmacy", "Community Pharmacy Department"),
+            ("dm_test", hash_password("DMTest@2024"), "Department Head", "DM Test", "DM Test Department"),
+            ("full_emr", hash_password("FullEMR@2024"), "Department Head", "Full EMR", "Full EMR Department"),
+            ("epi_modernization", hash_password("EPIModernization@2024"), "Department Head", "EPI Modernization", "EPI Modernization Department"),
+            ("zero_dose", hash_password("ZeroDose@2024"), "Department Head", "Zero Dose", "Zero Dose Department"),
+            ("multi_sectoral", hash_password("MultiSectoral@2024"), "Department Head", "Multi-Sectoral", "Multi-Sectoral Department"),
+            ("cash_program", hash_password("CashProgram@2024"), "Department Head", "Cash Program", "Cash Program Department"),
+            ("hygiene", hash_password("Hygiene@2024"), "Department Head", "Hygiene & Sanitation", "Hygiene & Sanitation Department"),
+            ("hiv_sti", hash_password("HIVSTI@2024"), "Department Head", "HIV/STI", "HIV/STI Department")
         ]
         
         for username, password, role, full_name, data_elements in users_data:
@@ -180,26 +187,29 @@ def init_db():
                 VALUES (?, ?, ?, ?, ?)
             ''', (username, password, role, full_name, data_elements))
     else:
-        # Check if HIV user exists and create if not
-        cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'hiv'")
+        # Check if HIV/STI user exists and create if not
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'hiv_sti'")
         if cursor.fetchone()[0] == 0:
             cursor.execute('''
                 INSERT INTO users (username, password, role, department, full_name)
                 VALUES (?, ?, ?, ?, ?)
-            ''', ("hiv", "6641", "Department Head", "HIV/STI", "hiv_sti"))
-            print("HIV user created manually")
+            ''', ("hiv_sti", hash_password("HIVSTI@2024"), "Department Head", "HIV/STI", "HIV/STI Department"))
+            print("HIV/STI user created manually")
     
     conn.commit()
     conn.close()
 
 # Authentication functions
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
 def verify_user(username, password):
     conn = sqlite3.connect('healthcare_performance.db')
     cursor = conn.cursor()
     cursor.execute('''
         SELECT role, department, full_name FROM users 
         WHERE username = ? AND password = ?
-    ''', (username, password))
+    ''', (username, hash_password(password)))
     result = cursor.fetchone()
     conn.close()
     
