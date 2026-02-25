@@ -1,0 +1,16 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+healthcheckPath = "/_stcore/health"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[[services]]
+name = "healthcare-app"
+
+[services.variables]
+PORT = "8501"
+STREAMLIT_SERVER_PORT = "8501"
+STREAMLIT_SERVER_ADDRESS = "0.0.0.0"

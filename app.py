@@ -4,7 +4,6 @@ import sqlite3
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from streamlit.components.v1 import html
 import hashlib
 from datetime import datetime
 
@@ -1052,7 +1051,7 @@ def admin_dashboard():
     </style>
     """
     
-    html(ranking_html, height=600)
+    st.markdown(ranking_html, unsafe_allow_html=True)
     
     # Detailed Analysis
     st.subheader("🔍 Detailed Woreda Analysis")
