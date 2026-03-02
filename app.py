@@ -1131,13 +1131,13 @@ def dashboard_view():
         st.markdown(f"""<div style="{kpi_style}border-top:4px solid #28a745;">
             <p style="color:#718096;font-size:0.78rem;font-weight:600;text-transform:uppercase;margin:0;">Top Woreda 🥇</p>
             <h3 style="color:#28a745;font-size:1rem;margin:8px 0 0;font-weight:800;">{top_row['woreda_name']}</h3>
-            <p style="color:#28a745;margin:4px 0 0;font-weight:700;">{top_row['percentage']:.1f}%</p></div>""",
+            <p style="color:#28a745;margin:4px 0 0;font-weight:700;">{top_row['avg_indicator_perf']:.1f}%</p></div>""",
             unsafe_allow_html=True)
     with k3:
         st.markdown(f"""<div style="{kpi_style}border-top:4px solid #dc3545;">
             <p style="color:#718096;font-size:0.78rem;font-weight:600;text-transform:uppercase;margin:0;">Lowest Woreda</p>
             <h3 style="color:#dc3545;font-size:1rem;margin:8px 0 0;font-weight:800;">{bot_row['woreda_name']}</h3>
-            <p style="color:#dc3545;margin:4px 0 0;font-weight:700;">{bot_row['percentage']:.1f}%</p></div>""",
+            <p style="color:#dc3545;margin:4px 0 0;font-weight:700;">{bot_row['avg_indicator_perf']:.1f}%</p></div>""",
             unsafe_allow_html=True)
     with k4:
         st.markdown(f"""<div style="{kpi_style}border-top:4px solid #7c3aed;">
