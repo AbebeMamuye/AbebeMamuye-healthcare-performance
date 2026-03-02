@@ -370,9 +370,8 @@ def init_data_file():
 # ─────────────────────────────────────────────────────────────────────────────
 def perf_band(pct):
     """Return (hex_color, emoji, label) based on percentage."""
-    if pct >= 80:   return '#28a745', '🟢', 'High'
-    elif pct >= 60: return '#1f77b4', '🔵', 'Good'
-    elif pct >= 40: return '#ffc107', '🟡', 'Average'
+    if pct >= 75:   return '#28a745', '🟢', 'High'
+    elif pct >= 50: return '#ffc107', '🟡', 'Average'
     else:           return '#dc3545', '🔴', 'Low'
 
 
@@ -858,13 +857,11 @@ def render_ranking_table(ranked: pd.DataFrame):
     </table>
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;">
         <span style="background:#28a74522;color:#28a745;border:1px solid #28a745;
-                     padding:4px 12px;border-radius:12px;font-size:0.78rem;font-weight:600;">🟢 High ≥80%</span>
-        <span style="background:#1f77b422;color:#1f77b4;border:1px solid #1f77b4;
-                     padding:4px 12px;border-radius:12px;font-size:0.78rem;font-weight:600;">🔵 Good 60–79%</span>
+                     padding:4px 12px;border-radius:12px;font-size:0.78rem;font-weight:600;">🟢 High ≥75%</span>
         <span style="background:#ffc10722;color:#856404;border:1px solid #ffc107;
-                     padding:4px 12px;border-radius:12px;font-size:0.78rem;font-weight:600;">🟡 Average 40–59%</span>
+                     padding:4px 12px;border-radius:12px;font-size:0.78rem;font-weight:600;">🟡 Average 50–74%</span>
         <span style="background:#dc354522;color:#dc3545;border:1px solid #dc3545;
-                     padding:4px 12px;border-radius:12px;font-size:0.78rem;font-weight:600;">🔴 Low &lt;40%</span>
+                     padding:4px 12px;border-radius:12px;font-size:0.78rem;font-weight:600;">🔴 Low &lt;50%</span>
     </div><br>""", unsafe_allow_html=True)
 
 
@@ -873,22 +870,31 @@ def render_ranking_table(ranked: pd.DataFrame):
 # ─────────────────────────────────────────────────────────────────────────────
 def render_charts(ranked: pd.DataFrame, df: pd.DataFrame):
     # ── CHART 1: Woreda Ranking Bar Chart ─────────────────────────────────────
+    # Color coding logic: >=75 green, >=50 yellow, <50 red
+    def map_bar_color(val):
+        if val >= 75: return '#28a745'
+        if val >= 50: return '#ffc107'
+        return '#dc3545'
+    
+    ranked_plot = ranked.copy()
+    ranked_plot['bar_color'] = ranked_plot['avg_indicator_perf'].apply(map_bar_color)
+
     bar = px.bar(
-        ranked, x='avg_indicator_perf', y='woreda_name', orientation='h',
-        color='avg_indicator_perf',
-        color_continuous_scale=[[0,'#dc3545'],[0.4,'#ffc107'],[0.6,'#1f77b4'],[1,'#28a745']],
+        ranked_plot, x='avg_indicator_perf', y='woreda_name', orientation='h',
+        color='bar_color',
+        color_discrete_map={'#28a745': '#28a745', '#ffc107': '#ffc107', '#dc3545': '#dc3545'},
         text='avg_indicator_perf',
         labels={'avg_indicator_perf': 'Avg Performance (%)', 'woreda_name': 'Woreda'},
         title='<b>Woreda Performance Rankings (Average Indicator Achievement)</b>',
     )
     bar.update_layout(
-        height=620, coloraxis_showscale=False, paper_bgcolor='white', plot_bgcolor='#f8fafc',
-        xaxis=dict(range=[0, 110], title='Average Performance (%)'),
+        height=620, showlegend=False, paper_bgcolor='white', plot_bgcolor='#f8fafc',
+        xaxis=dict(range=[0, 105], title='Average Performance (%)'),
         yaxis=dict(categoryorder='total ascending', title=''),
         margin=dict(l=8, r=80, t=48, b=16),
     )
     bar.update_traces(texttemplate='%{text:.1f}%', textposition='outside',
-                      textfont=dict(size=11))
+                      textfont=dict(size=11, color='#000'))
     st.plotly_chart(bar, use_container_width=True)
 
     st.markdown("---")  # Separator
@@ -901,48 +907,47 @@ def render_charts(ranked: pd.DataFrame, df: pd.DataFrame):
         </p>
     </div>""", unsafe_allow_html=True)
     
-    selected_woredas = st.multiselect(
-        "🏘️ Select Woredas to Compare Individual Indicators:", 
-        options=WOREDAS, 
-        default=[ranked.iloc[0]['woreda_name']] if not ranked.empty else []
+    selected_woreda = st.selectbox(
+        "🏘️ Select Woreda to Analysis Individual Indicators:", 
+        options=sorted(WOREDAS), 
+        index=0 if not ranked.empty else 0
     )
     
-    if not selected_woredas:
-        st.info("💡 Please select one or more Woredas to generate the indicator breakdown graph.")
+    if not selected_woreda:
+        st.info("💡 Please select a Woreda to generate the indicator breakdown graph.")
     else:
         # Prepare data for line chart
         plot_data = []
-        for w_name in selected_woredas:
-            w_row = df[df['woreda_name'] == w_name]
-            if w_row.empty: continue
+        w_row = df[df['woreda_name'] == selected_woreda]
+        if not w_row.empty:
             for ind in INDICATORS:
                 plot_data.append({
-                    'Woreda': w_name,
+                    'Woreda': selected_woreda,
                     'Indicator': ind['label'],
                     'Score': float(w_row[ind['col']].iloc[0]),
-                    'Max': ind['max']
+                    'Max': ind['max'],
+                    'Achievement (%)': (float(w_row[ind['col']].iloc[0]) / ind['max'] * 100) if ind['max'] > 0 else 0
                 })
         
         line_df = pd.DataFrame(plot_data)
         
         line = px.line(
-            line_df, x='Indicator', y='Score', color='Woreda',
+            line_df, x='Indicator', y='Achievement (%)',
             markers=True,
-            title='<b>Detailed Performance Breakdown by Indicator</b>',
-            labels={'Score': 'Score Value', 'Indicator': 'Data Element'},
-            hover_data={'Max': True}
+            title=f'<b>Detailed Indicator Achievement: {selected_woreda}</b>',
+            labels={'Achievement (%)': 'Achievement Rate (%)', 'Indicator': 'Data Element'},
+            hover_data={'Max': True, 'Score': True}
         )
         line.update_layout(
             height=580, 
             paper_bgcolor='white', 
             plot_bgcolor='#f8fafc',
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(l=10, r=10, t=80, b=140)
         )
         # Make lines bold
-        line.update_traces(line=dict(width=5), marker=dict(size=12))
+        line.update_traces(line=dict(width=5, color='#1f77b4'), marker=dict(size=12, color='#0a1628'))
         line.update_xaxes(tickangle=45, showgrid=True, gridwidth=1, gridcolor='#edf2f7')
-        line.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#edf2f7')
+        line.update_yaxes(range=[0, 110], showgrid=True, gridwidth=1, gridcolor='#edf2f7')
         st.plotly_chart(line, use_container_width=True)
 
 
