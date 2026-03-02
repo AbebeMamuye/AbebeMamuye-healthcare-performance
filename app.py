@@ -113,9 +113,11 @@ html, body, [class*="css"] { font-weight: 600 !important; }
     border: 3px solid #0a1628 !important; border-radius: 8px !important;
     font-size: 1.05rem !important; font-weight: 800 !important;
     color: #0a1628 !important;
+    padding: 10px 12px !important;
 }
 .stTextInput > div > div > input:focus, .stNumberInput > div > div > input:focus {
     border-color: #1f77b4 !important; background: #f0f7ff !important;
+    box-shadow: 0 0 0 2px rgba(31, 119, 180, 0.2) !important;
 }
 
 /* ── Tabs ── */
