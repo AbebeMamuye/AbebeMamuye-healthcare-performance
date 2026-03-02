@@ -37,17 +37,19 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 
-/* ── Hide Streamlit chrome ── */
-[data-testid="stHeader"],
-[data-testid="stFooter"],
-[data-testid="stToolbar"],
+/* ── Hide ALL Streamlit branding ── */
+[data-testid="stHeader"], 
+[data-testid="stFooter"], 
+[data-testid="stToolbar"], 
 [data-testid="stDecoration"],
 [data-testid="stSidebarHeader"],
 [data-testid="stSidebarNav"],
-.viewerBadge_container__1QSob,
-.stDeployButton,
 [data-testid="stStatusWidget"],
-header, footer, #MainMenu { display: none !important; visibility: hidden !important; }
+.stDeployButton,
+.viewerBadge_container__1QSob,
+.stAppDeployButton,
+#MainMenu, footer, header,
+#Tabs-tab-list { display: none !important; visibility: hidden !important; height: 0 !important; width: 0 !important; opacity: 0 !important; }
 
 /* ── App background ── */
 .stApp { background: #f0f4f8 !important; }
