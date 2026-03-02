@@ -46,11 +46,15 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 [data-testid="stSidebarHeader"],
 [data-testid="stSidebarNav"],
 [data-testid="stStatusWidget"],
+[data-testid="stConnectionStatus"],
+[data-testid="stManageAppButton"],
 .stDeployButton,
-.viewerBadge_container__1QSob,
 .stAppDeployButton,
+[class*="viewerBadge"],
+[class*="stConnectionStatus"],
+[class*="stStatusWidget"],
 #MainMenu, footer, header,
-#Tabs-tab-list { display: none !important; visibility: hidden !important; height: 0 !important; width: 0 !important; opacity: 0 !important; }
+#Tabs-tab-list { display: none !important; visibility: hidden !important; height: 0 !important; width: 0 !important; opacity: 0 !important; pointer-events: none !important; }
 
 /* ── App background ── */
 .stApp { background: #f0f4f8 !important; }
