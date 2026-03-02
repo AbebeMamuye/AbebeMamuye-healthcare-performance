@@ -48,13 +48,24 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 [data-testid="stStatusWidget"],
 [data-testid="stConnectionStatus"],
 [data-testid="stManageAppButton"],
+[data-testid="stViewerBadge"],
 .stDeployButton,
 .stAppDeployButton,
 [class*="viewerBadge"],
 [class*="stConnectionStatus"],
 [class*="stStatusWidget"],
+[class*="viewProfile"],
+[class*="container_gzau3"],
+a[href*="share.streamlit.io/user/"],
 #MainMenu, footer, header,
-#Tabs-tab-list { display: none !important; visibility: hidden !important; height: 0 !important; width: 0 !important; opacity: 0 !important; pointer-events: none !important; }
+#Tabs-tab-list { 
+    display: none !important; 
+    visibility: hidden !important; 
+    height: 0 !important; 
+    width: 0 !important; 
+    opacity: 0 !important; 
+    pointer-events: none !important; 
+}
 
 /* ── App background ── */
 .stApp { background: #f0f4f8 !important; }
