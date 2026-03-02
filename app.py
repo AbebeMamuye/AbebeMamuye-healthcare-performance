@@ -275,7 +275,6 @@ def recalculate(df: pd.DataFrame) -> pd.DataFrame:
         df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0)
     
     df['total_score'] = df[cols].sum(axis=1).round(2)
-    df['percentage'] = (df['total_score'] / TOTAL_MAX * 100).round(2)
     
     perf_values = []
     for i in INDICATORS:
@@ -283,7 +282,9 @@ def recalculate(df: pd.DataFrame) -> pd.DataFrame:
         perf_values.append(ach)
     
     perf_matrix = pd.concat(perf_values, axis=1)
+    # Unified Performance: Average Achievement Rate of all indicators
     df['avg_indicator_perf'] = perf_matrix.mean(axis=1).round(2)
+    df['percentage'] = df['avg_indicator_perf'] # Ensure consistency everywhere
     return df
 
 def cleanup_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -936,7 +937,8 @@ def render_charts(ranked: pd.DataFrame, df: pd.DataFrame):
             markers=True,
             title=f'<b>Detailed Indicator Achievement: {selected_woreda}</b>',
             labels={'Achievement (%)': 'Achievement Rate (%)', 'Indicator': 'Data Element'},
-            hover_data={'Max': True, 'Score': True}
+            hover_data={'Max': True, 'Score': True},
+            text='Achievement (%)' # Adding value labels
         )
         line.update_layout(
             height=580, 
@@ -944,10 +946,16 @@ def render_charts(ranked: pd.DataFrame, df: pd.DataFrame):
             plot_bgcolor='#f8fafc',
             margin=dict(l=10, r=10, t=80, b=140)
         )
-        # Make lines bold
-        line.update_traces(line=dict(width=5, color='#1f77b4'), marker=dict(size=12, color='#0a1628'))
+        # Make lines bold and position labels
+        line.update_traces(
+            line=dict(width=5, color='#1f77b4'), 
+            marker=dict(size=12, color='#0a1628'),
+            texttemplate='%{text:.1f}%', 
+            textposition='top center',
+            textfont=dict(size=11, color='#0a1628', family='Inter Bold')
+        )
         line.update_xaxes(tickangle=45, showgrid=True, gridwidth=1, gridcolor='#edf2f7')
-        line.update_yaxes(range=[0, 110], showgrid=True, gridwidth=1, gridcolor='#edf2f7')
+        line.update_yaxes(range=[0, 115], showgrid=True, gridwidth=1, gridcolor='#edf2f7')
         st.plotly_chart(line, use_container_width=True)
 
 
