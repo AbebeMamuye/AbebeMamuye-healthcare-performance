@@ -86,13 +86,26 @@ html, body, [class*="css"] { font-weight: 600 !important; }
     background: linear-gradient(180deg, #0a1628 0%, #1a3a5c 100%) !important;
     border-right: 3px solid #1f77b4;
 }
-[data-testid="stSidebar"] * { color: white !important; font-weight: 700 !important; }
-/* EXCEPT for selectbox text which needs dark color */
-[data-testid="stSidebar"] div[data-testid="stSelectbox"] * { color: #0a1628 !important; }
-[data-testid="stSidebar"] div[data-testid="stSelectbox"] label { color: white !important; }
-[data-testid="stSidebar"] div[data-testid="stSelectbox"] label * { color: white !important; }
-[data-testid="stSidebar"] .stRadio > label { color: rgba(255,255,255,0.7) !important; font-size: 0.85rem !important; }
-[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.3) !important; border-width: 2px !important; }
+/* Make sidebar labels and text white, without affecting input fields */
+[data-testid="stSidebar"] .stMarkdown, 
+[data-testid="stSidebar"] label, 
+[data-testid="stSidebar"] p, 
+[data-testid="stSidebar"] span, 
+[data-testid="stSidebar"] h1, 
+[data-testid="stSidebar"] h2, 
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] {
+    color: white !important;
+    font-weight: 700 !important;
+}
+[data-testid="stSidebar"] .stRadio > label { 
+    color: rgba(255,255,255,0.7) !important; 
+    font-size: 0.85rem !important; 
+}
+[data-testid="stSidebar"] hr { 
+    border-color: rgba(255,255,255,0.3) !important; 
+    border-width: 2px !important; 
+}
 
 /* ── Buttons ── */
 .stButton > button {
