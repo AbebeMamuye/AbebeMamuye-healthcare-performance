@@ -5,6 +5,8 @@ import os
 import base64
 import plotly.express as px
 import plotly.graph_objects as go
+import socket
+import sqlite3
 from datetime import datetime
 from st_supabase_connection import SupabaseConnection
 from dotenv import load_dotenv
@@ -85,8 +87,10 @@ html, body, [class*="css"] { font-weight: 600 !important; }
     border-right: 3px solid #1f77b4;
 }
 [data-testid="stSidebar"] * { color: white !important; font-weight: 700 !important; }
-/* EXCEPT for inputs which need dark text */
-[data-testid="stSidebar"] div[data-baseweb="select"] * { color: #0a1628 !important; }
+/* EXCEPT for selectbox text which needs dark color */
+[data-testid="stSidebar"] div[data-testid="stSelectbox"] * { color: #0a1628 !important; }
+[data-testid="stSidebar"] div[data-testid="stSelectbox"] label { color: white !important; }
+[data-testid="stSidebar"] div[data-testid="stSelectbox"] label * { color: white !important; }
 [data-testid="stSidebar"] .stRadio > label { color: rgba(255,255,255,0.7) !important; font-size: 0.85rem !important; }
 [data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.3) !important; border-width: 2px !important; }
 
@@ -118,10 +122,22 @@ html, body, [class*="css"] { font-weight: 600 !important; }
     font-size: 1.05rem !important; font-weight: 800 !important;
     color: #0a1628 !important;
     padding: 10px 12px !important;
+    max-width: 100% !important;
 }
 .stTextInput > div > div > input:focus, .stNumberInput > div > div > input:focus {
     border-color: #1f77b4 !important; background: #f0f7ff !important;
     box-shadow: 0 0 0 2px rgba(31, 119, 180, 0.2) !important;
+}
+/* ── Score input cell border ── */
+.score-input-cell {
+    background: var(--cell-bg, #f8fafc);
+    border-bottom: 2px solid #cbd5e0;
+    border-right: 2px solid #cbd5e0;
+    border-top: 0;
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    padding: 4px 10px;
 }
 
 /* ── Tabs ── */
@@ -153,35 +169,36 @@ WOREDAS = [
 ]
 
 INDICATORS = [
-    # Medical & Pharmacy (37.5 pts)
-    {'col': 'medical_service',    'label': 'Medical Service',      'max': 15.0, 'cat': 'Medical & Pharmacy'},
-    {'col': 'rmh',                'label': 'RMH',                  'max': 10.0, 'cat': 'Medical & Pharmacy'},
-    {'col': 'pharmacy_logistic',  'label': 'Pharmacy & Logistic',  'max':  5.0, 'cat': 'Medical & Pharmacy'},
-    {'col': 'ultrasound',         'label': 'Ultrasound',           'max':  2.5, 'cat': 'Medical & Pharmacy'},
-    {'col': 'apts',               'label': 'APTS',                 'max':  2.5, 'cat': 'Medical & Pharmacy'},
-    {'col': 'community_pharmacy', 'label': 'Community Pharmacy',   'max':  2.5, 'cat': 'Medical & Pharmacy'},
-    {'col': 'dm_test',            'label': 'DM Test',              'max':  2.5, 'cat': 'Medical & Pharmacy'},
-    # Prevention & Disease (20 pts)
-    {'col': 'epi',                'label': 'EPI',                  'max':  5.0, 'cat': 'Prevention & Disease'},
-    {'col': 'child_health',       'label': 'Child Health',         'max':  5.0, 'cat': 'Prevention & Disease'},
-    {'col': 'tb_leprosy',         'label': 'TB & Leprosy',         'max':  5.0, 'cat': 'Prevention & Disease'},
-    {'col': 'phem',               'label': 'PHEM',                 'max':  5.0, 'cat': 'Prevention & Disease'},
-    # Admin & Finance (25 pts)
-    {'col': 'cbhi',               'label': 'CBHI',                 'max': 10.0, 'cat': 'Admin & Finance'},
-    {'col': 'finance',            'label': 'Finance',              'max':  5.0, 'cat': 'Admin & Finance'},
-    {'col': 'plan',               'label': 'Plan',                 'max':  5.0, 'cat': 'Admin & Finance'},
-    {'col': 'wt',                 'label': 'WT',                   'max':  5.0, 'cat': 'Admin & Finance'},
-    # Innovation & Quality (22.5 pts)
-    {'col': 'full_emr',           'label': 'Full EMR',             'max':  5.0, 'cat': 'Innovation & Quality'},
-    {'col': 'epi_modernization',  'label': 'EPI Modernization',    'max':  5.0, 'cat': 'Innovation & Quality'},
-    {'col': 'zero_dose',          'label': 'Zero Dose',            'max':  5.0, 'cat': 'Innovation & Quality'},
-    {'col': 'multi_sectoral',     'label': 'Multi-Sectoral',       'max':  2.5, 'cat': 'Innovation & Quality'},
-    {'col': 'cash_program',       'label': 'Cash Program',         'max':  5.0, 'cat': 'Innovation & Quality'},
-    {'col': 'hygiene_sanitation', 'label': 'Hygiene & Sanitation', 'max':  5.0, 'cat': 'Innovation & Quality'},
-    {'col': 'hiv_sti',            'label': 'HIV/STI',              'max':  5.0, 'cat': 'Innovation & Quality'},
+    # Routine KPI (79 pts)
+    {'col': 'wt',                 'label': 'WT',                   'max':  6.0, 'cat': 'Routine KPI'},
+    {'col': 'rmh',                'label': 'RMH',                  'max': 10.0, 'cat': 'Routine KPI'},
+    {'col': 'epi',                'label': 'EPI',                  'max':  3.0, 'cat': 'Routine KPI'},
+    {'col': 'child_health',       'label': 'Child Health',         'max':  7.0, 'cat': 'Routine KPI'},
+    {'col': 'nutrition',          'label': 'Nutrition',            'max':  4.0, 'cat': 'Routine KPI'},
+    {'col': 'tb',                 'label': 'TB',                   'max':  5.0, 'cat': 'Routine KPI'},
+    {'col': 'hiv',                'label': 'HIV',                  'max':  4.0, 'cat': 'Routine KPI'},
+    {'col': 'msr',                'label': 'MSR',                  'max':  3.0, 'cat': 'Routine KPI'},
+    {'col': 'medical_service',    'label': 'Medical Service',      'max':  5.0, 'cat': 'Routine KPI'},
+    {'col': 'ncd',                'label': 'NCD',                  'max':  4.0, 'cat': 'Routine KPI'},
+    {'col': 'hygiene',            'label': 'Hygiene',              'max':  5.0, 'cat': 'Routine KPI'},
+    {'col': 'phem',               'label': 'PHEM',                 'max':  3.0, 'cat': 'Routine KPI'},
+    {'col': 'pharmacy',           'label': 'Pharmacy',             'max':  4.0, 'cat': 'Routine KPI'},
+    {'col': 'hmis',               'label': 'HMIS',                 'max':  4.0, 'cat': 'Routine KPI'},
+    {'col': 'hr',                 'label': 'HR',                   'max':  1.0, 'cat': 'Routine KPI'},
+    {'col': 'regulatory',         'label': 'Regulatory',           'max':  1.0, 'cat': 'Routine KPI'},
+    {'col': 'hcf',                'label': 'HCF',                  'max': 10.0, 'cat': 'Routine KPI'},
+    # Initiative (21 pts)
+    {'col': 'full_emr',           'label': 'Full EMR',             'max':  3.0, 'cat': 'Initiative'},
+    {'col': 'ultrasound',         'label': 'Ultrasound',           'max':  3.0, 'cat': 'Initiative'},
+    {'col': 'apts',               'label': 'APTS',                 'max':  3.0, 'cat': 'Initiative'},
+    {'col': 'community_pharmacy', 'label': 'Community Pharmacy',   'max':  3.0, 'cat': 'Initiative'},
+    {'col': 'dm_test',            'label': 'DM Test',              'max':  3.0, 'cat': 'Initiative'},
+    {'col': 'epi_modernization',  'label': 'EPI Modernization',    'max':  2.0, 'cat': 'Initiative'},
+    {'col': 'zero_dose',          'label': 'Zero Dose',            'max':  2.0, 'cat': 'Initiative'},
+    {'col': 'cash_program',       'label': 'Cash Program',         'max':  2.0, 'cat': 'Initiative'},
 ]
 
-TOTAL_MAX = 110.0  # Normalized to 110 per user request
+TOTAL_MAX = 100.0  # New weights total 100
 INDICATOR_COUNT = len(INDICATORS)
 IND_BY_COL = {i['col']: i for i in INDICATORS}
 
@@ -200,46 +217,39 @@ USERS = {
     'admin':          {'ph': _h('admin@2018'),          'role': 'Admin',       'cols': [], 'dept_name': 'Administration'},
     'superadmin':     {'ph': _h('super@2024'),          'role': 'Super Admin', 'cols': [], 'dept_name': 'Administration'},
     # ── Department Heads (username / password / columns they enter) ─────────
-    # 1. Medical Service → Medical Service, DM Test, WT
     'medical':        {'ph': _h('Medical@2024'),        'role': 'Dept Head',
-                       'cols': ['medical_service', 'dm_test', 'wt'],
+                       'cols': ['medical_service', 'ncd', 'wt', 'regulatory'],
                        'dept_name': 'Medical Service'},
-    # 2. Pharmacy & Logistic → Pharmacy & Logistic, APTS, Community Pharmacy, Ultrasound
     'pharmacy':       {'ph': _h('Pharmacy@2024'),       'role': 'Dept Head',
-                       'cols': ['pharmacy_logistic', 'apts', 'community_pharmacy', 'ultrasound'],
+                       'cols': ['pharmacy', 'apts', 'community_pharmacy', 'ultrasound', 'dm_test'],
                        'dept_name': 'Pharmacy & Logistic'},
-    # 3. Child Health → EPI Modernization, Zero Dose, EPI, Child Health
     'childhealth':    {'ph': _h('ChildHealth@2024'),    'role': 'Dept Head',
-                       'cols': ['epi_modernization', 'zero_dose', 'epi', 'child_health'],
+                       'cols': ['child_health', 'nutrition', 'epi', 'epi_modernization', 'zero_dose'],
                        'dept_name': 'Child Health'},
-    # 4. HMIS → Plan, Full EMR
     'hmis':           {'ph': _h('hmis@2024'),           'role': 'Dept Head',
-                       'cols': ['plan', 'full_emr'],
+                       'cols': ['hmis', 'full_emr'],
                        'dept_name': 'HMIS'},
-    # 5. TB & Leprosy → TB & Leprosy
     'tb':             {'ph': _h('TB@2024'),             'role': 'Dept Head',
-                       'cols': ['tb_leprosy'],
+                       'cols': ['tb'],
                        'dept_name': 'TB & Leprosy'},
-    # 6. Finance → Finance, CBHI
     'finance':        {'ph': _h('Finance@2024'),        'role': 'Dept Head',
-                       'cols': ['finance', 'cbhi'],
+                       'cols': ['hcf'],
                        'dept_name': 'Finance'},
-    # 7. Cash Program → Cash Program, Hygiene & Sanitation
     'cash_program':   {'ph': _h('CashProgram@2024'),    'role': 'Dept Head',
-                       'cols': ['cash_program', 'hygiene_sanitation'],
+                       'cols': ['cash_program', 'hygiene'],
                        'dept_name': 'Cash Program'},
-    # 8. PHEM → PHEM
     'phem':           {'ph': _h('PHEM@2024'),           'role': 'Dept Head',
                        'cols': ['phem'],
                        'dept_name': 'PHEM'},
-    # 9. Multi-Sectoral & HIV → Multi-Sectoral, HIV/STI
     'multi_sectoral': {'ph': _h('MultiSectoral@2024'), 'role': 'Dept Head',
-                       'cols': ['multi_sectoral', 'hiv_sti'],
+                       'cols': ['msr', 'hiv'],
                        'dept_name': 'Multi-Sectoral & HIV'},
-    # 10. RMH → RMH
     'rmh':            {'ph': _h('rmh@2024'),            'role': 'Dept Head',
                        'cols': ['rmh'],
                        'dept_name': 'RMH'},
+    'hr':             {'ph': _h('HR@2024'),             'role': 'Dept Head',
+                       'cols': ['hr'],
+                       'dept_name': 'HR Department'},
 }
 
 
@@ -264,8 +274,26 @@ YEARS = ["2016", "2017", "2018", "2019", "2020", "2021"]
 def get_db_connection():
     """Get Supabase connection with credentials provided by the user."""
     # Priority: st.secrets -> .env -> Hardcoded fallback
-    url = st.secrets.get("SUPABASE_URL") or os.getenv("SUPABASE_URL") or "https://xjbntmsacknqmymvxoig.supabase.co"
-    key = st.secrets.get("SUPABASE_KEY") or os.getenv("SUPABASE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqYm50bXNhY2tucW15bXZ4b2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NDY4MjIsImV4cCI6MjA4ODAyMjgyMn0.2WfPhlZZ3RMtJqfNBIQcQfMwAnjA9Yp-dtnzfFgw-XI"
+    _fallback_url = "https://xjbntmsacknqmymvxoig.supabase.co"
+    _fallback_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqYm50bXNhY2tucW15bXZ4b2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NDY4MjIsImV4cCI6MjA4ODAyMjgyMn0.2WfPhlZZ3RMtJqfNBIQcQfMwAnjA9Yp-dtnzfFgw-XI"
+    try:
+        url = st.secrets.get("SUPABASE_URL") or os.getenv("SUPABASE_URL") or _fallback_url
+        key = st.secrets.get("SUPABASE_KEY") or os.getenv("SUPABASE_KEY") or _fallback_key
+    except Exception:
+        url = os.getenv("SUPABASE_URL") or _fallback_url
+        key = os.getenv("SUPABASE_KEY") or _fallback_key
+
+    # Quick DNS check to see if project is "Paused"
+    try:
+        hostname = url.replace("https://", "").split("/")[0]
+        socket.gethostbyname(hostname)
+    except socket.gaierror:
+        st.error("🛑 **Database Project Paused or URL Invalid**")
+        st.warning("⚠️ The Supabase project at 'xjbntmsacknqmymvxoig' is currently **PAUSED** or unreachable.")
+        st.info("💡 **Action Required:** Please log in to your Supabase dashboard and **Resume** your project.")
+        return "PAUSED"
+    except Exception as e:
+        print(f"DNS Check Error: {e}")
 
     try:
         return st.connection("supabase", type=SupabaseConnection, 
@@ -295,9 +323,9 @@ def execute_query(table, query_type="select", data=None, filters=None):
 def recalculate(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty: return df
     cols = [i['col'] for i in INDICATORS if i['col'] in df.columns]
-    # Ensure all indicator columns are numeric
+    # Ensure all indicator columns are numeric and float64
     for c in cols:
-        df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0)
+        df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0).astype(float)
     
     df['total_score'] = df[cols].sum(axis=1).round(2)
     
@@ -313,7 +341,7 @@ def recalculate(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def cleanup_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Standardize dataframe structure, ensuring all required columns exist."""
+    """Standardize dataframe structure, ensuring all required columns exist and have correct types."""
     # 1. Ensure core columns exist
     for c in ['woreda_name', 'year', 'quarter']:
         if c not in df.columns:
@@ -324,15 +352,20 @@ def cleanup_df(df: pd.DataFrame) -> pd.DataFrame:
     df['year']        = df['year'].astype(str).str.strip()
     df['quarter']     = df['quarter'].astype(str).str.strip()
     
-    # 3. Add missing indicators
+    # 3. Add and cast indicators
     for ind in INDICATORS:
-        if ind['col'] not in df.columns:
-            df[ind['col']] = 0.0
+        c = ind['col']
+        if c not in df.columns:
+            df[c] = 0.0
+        else:
+            df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0).astype(float)
     
     # 4. Add summary columns
     for c in ('total_score', 'percentage', 'avg_indicator_perf', 'last_updated'):
         if c not in df.columns:
             df[c] = '' if c == 'last_updated' else 0.0
+        elif c != 'last_updated':
+            df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0).astype(float)
             
     df.fillna(0.0, inplace=True)
     return df
@@ -355,53 +388,87 @@ def init_db():
     save_data(df)
     return df
 
+LOCAL_DB = os.path.join(os.path.dirname(__file__), 'healthcare_performance.db')
+
 def load_data() -> pd.DataFrame:
-    conn = get_db_connection()
-    if not conn:
-        st.warning("⚠️ Database connection not configured. Please check Streamlit Secrets.")
-        return pd.DataFrame(columns=['woreda_name', 'year', 'quarter'] + [i['col'] for i in INDICATORS])
-    
+    # ── 1. Try local SQLite first (always available, correct schema) ──
     try:
-        # Try to fetch from table 'performance_data'
+        if os.path.exists(LOCAL_DB):
+            sqlite_conn = sqlite3.connect(LOCAL_DB)
+            df = pd.read_sql_query("SELECT * FROM performance_data", sqlite_conn)
+            sqlite_conn.close()
+            if 'id' in df.columns: df = df.drop(columns=['id'])
+            if not df.empty and 'woreda_name' in df.columns:
+                return cleanup_df(df)
+    except Exception as e:
+        st.warning(f"SQLite read error: {e}")
+
+    # ── 2. Try local Excel fallback ──
+    try:
+        if os.path.exists(DATA_FILE):
+            df = pd.read_excel(DATA_FILE)
+            if not df.empty and 'woreda_name' in df.columns:
+                return cleanup_df(df)
+    except Exception as e:
+        st.warning(f"Excel read error: {e}")
+
+    # ── 3. Try Supabase cloud ──
+    conn = get_db_connection()
+    if conn is None or conn == "PAUSED":
+        st.warning("No local data found and Supabase is offline. Showing empty dashboard.")
+        return pd.DataFrame(columns=['woreda_name', 'year', 'quarter'] + [i['col'] for i in INDICATORS])
+
+    try:
         res = conn.table("performance_data").select("*").execute()
         if not res.data or len(res.data) == 0:
             return init_db()
-        
         df = pd.DataFrame(res.data)
-        
-        # If the resulting DataFrame has a RangeIndex (integer columns), something is wrong.
-        # This can happen if res.data is not a list of dicts.
         if isinstance(df.columns, pd.RangeIndex):
-             # Fallback to skeleton if data is malformed
-             st.error("⚠️ Loaded data is malformed (missing headers). Reverting to default view.")
-             return pd.DataFrame(columns=['woreda_name', 'year', 'quarter'] + [i['col'] for i in INDICATORS])
-
-        # Drop Supabase internal 'id' column if it exists to avoid confusion in calc
+            st.error("Loaded data is malformed (missing headers).")
+            return pd.DataFrame(columns=['woreda_name', 'year', 'quarter'] + [i['col'] for i in INDICATORS])
         if 'id' in df.columns:
             df = df.drop(columns=['id'])
-            
+        # Cache to local SQLite
+        try:
+            sqlite_conn = sqlite3.connect(LOCAL_DB)
+            df.to_sql('performance_data', sqlite_conn, index=False, if_exists='replace')
+            sqlite_conn.close()
+        except Exception:
+            pass
         return cleanup_df(df)
     except Exception as e:
-        st.error(f"❌ Database error: {e}")
-        # ALWAYS return a skeleton to avoid KeyError later
+        st.error(f"Database error: {e}")
         return pd.DataFrame(columns=['woreda_name', 'year', 'quarter'] + [i['col'] for i in INDICATORS])
 
 def save_data(df: pd.DataFrame):
-    conn = get_db_connection()
-    if not conn: return
-    
     # Recalculate totals before saving
     df = recalculate(df)
-    
-    # Convert to list of dicts for Supabase
-    records = df.to_dict('records')
-    
+
+    # ── 1. Save to local SQLite (primary local store) ──
     try:
-        # Upsert based on natural primary key (woreda, year, quarter)
-        # In Supabase, you must ensure these 3 columns have a UNIQUE constraint
+        sqlite_conn = sqlite3.connect(LOCAL_DB)
+        df.to_sql('performance_data', sqlite_conn, index=False, if_exists='replace')
+        sqlite_conn.close()
+    except Exception as e:
+        st.warning(f"SQLite save error: {e}")
+
+    # ── 2. Save to local Excel (secondary backup) ──
+    try:
+        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+        df.to_excel(DATA_FILE, index=False)
+    except Exception as e:
+        st.warning(f"Excel save error: {e}")
+
+    # ── 3. Try Supabase cloud save ──
+    conn = get_db_connection()
+    if not conn or conn == "PAUSED":
+        return  # Already saved locally, no cloud needed
+
+    records = df.to_dict('records')
+    try:
         conn.table("performance_data").upsert(records, on_conflict="woreda_name,year,quarter").execute()
     except Exception as e:
-        st.error(f"Failed to save data to cloud: {e}")
+        pass  # Local save already succeeded
 
 def init_data_file():
     """No-op for compatibility with other parts of the script."""
@@ -685,7 +752,7 @@ def dept_head_view():
     card(f"""
     <h3 style="color:#2d3748;margin:0 0 6px;">Enter <span style="color:#1f77b4;">{col_label}</span> Scores</h3>
     <p style="color:#718096;margin:0;font-size:0.88rem;">
-        Values: 0 – {col_max} pts per Woreda. Click <strong>Save</strong> when done.
+        Values: 0 – 100% per Woreda. (Cut-point equivalent out of {col_max} will be computed automatically). Click <strong>Save</strong> when done.
     </p>""")
 
     # Build current values from Excel (Filtered by Year & Quarter)
@@ -693,7 +760,9 @@ def dept_head_view():
     for w in WOREDAS:
         mask = (df['woreda_name'] == w) & (df['year'] == sel_year) & (df['quarter'] == sel_q)
         row = df[mask]
-        current_vals[w] = float(row[col_key].iloc[0]) if not row.empty else 0.0
+        weighted_val = float(row[col_key].iloc[0]) if not row.empty else 0.0
+        # Convert to percentage out of 100 for display
+        current_vals[w] = (weighted_val * 100.0 / col_max) if col_max > 0 else 0.0
 
     with st.form(f"dept_form_{col_key}_{sel_year}_{sel_q}"):
         # Table header - BOLD BORDERS
@@ -704,7 +773,7 @@ def dept_head_view():
                     border-radius:12px 12px 0 0;padding:12px 20px;">
             <div style="color:white;font-weight:900;font-size:1.1rem;letter-spacing:0.5px;">🏘️ WOREDA NAME</div>
             <div style="color:white;font-weight:900;font-size:1.1rem;text-align:center;letter-spacing:0.5px;">
-                {col_label.upper()}&nbsp;<span style="opacity:0.8;font-weight:400;font-size:0.85rem;">(MAX: {col_max})</span>
+                {col_label.upper()}&nbsp;<span style="opacity:0.8;font-weight:400;font-size:0.85rem;">(ENTER OUT OF 100, MAX CUT POINT: {col_max})</span>
             </div>
         </div>""", unsafe_allow_html=True)
 
@@ -721,10 +790,15 @@ def dept_head_view():
                     <span style="color:#0a1628;font-weight:800;font-size:1rem;">{woreda.upper()}</span>
                 </div>""", unsafe_allow_html=True)
             with c_inp:
-                inputs[woreda] = st.number_input(
-                    f"s{i}", min_value=0.0, max_value=col_max,
-                    value=current_vals[woreda], step=0.5,
+                st.markdown(f'<div style="background:{bg};border-bottom:2px solid #cbd5e0;border-right:2px solid #cbd5e0;border-left:2px solid #cbd5e0;padding:4px 8px;min-height:58px;display:flex;flex-direction:column;justify-content:center;">', unsafe_allow_html=True)
+                raw_val = st.number_input(
+                    f"s{i}", min_value=0.0, max_value=None,
+                    value=min(current_vals[woreda], 100.0), step=1.0,
                     key=f"di_{col_key}_{i}", label_visibility="collapsed")
+                inputs[woreda] = raw_val
+                if raw_val > 100.0:
+                    st.markdown('<p style="color:#e53e3e; font-size:0.8rem; font-weight:700; margin:4px 0 0 0;">Please Enter value <=100</p>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
 
         total_inp = sum(inputs.values())
         average   = total_inp / len(WOREDAS)
@@ -734,24 +808,34 @@ def dept_head_view():
                     border:3px solid #0c4a6e;
                     border-radius:0 0 12px 12px;padding:16px 20px;margin-bottom:20px;">
             <span style="color:#0c4a6e;font-weight:900;font-size:1.1rem;">
-                📊 ZONE TOTAL: <span style="font-size:1.3rem;">{total_inp:.1f}</span> / {len(WOREDAS)*col_max:.0f}
-                &nbsp;&nbsp;|&nbsp;&nbsp; AVERAGE SCORE: <span style="font-size:1.3rem;">{average:.2f}</span>
+                📊 ZONE TOTAL: <span style="font-size:1.3rem;">{total_inp:.1f}</span> / {len(WOREDAS)*100:.0f}
+                &nbsp;&nbsp;|&nbsp;&nbsp; AVERAGE SCORE: <span style="font-size:1.3rem;">{average:.2f}%</span>
             </span>
         </div>""", unsafe_allow_html=True)
 
+        # Determine if any input is invalid (> 100.0) to disable Save button
+        any_invalid = any(val > 100.0 for val in inputs.values())
+
         _, btn_col, _ = st.columns([1, 2, 1])
         with btn_col:
-            save = st.form_submit_button(f"💾  Save {col_label} Data", use_container_width=True, type="primary")
+            save = st.form_submit_button(
+                f"💾  Save {col_label} Data", 
+                use_container_width=True, 
+                type="primary",
+                disabled=any_invalid
+            )
 
-    if save:
+    if save and not any_invalid:
         for woreda, val in inputs.items():
+            # Convert user out-of-100 input to weighted score
+            weighted_val = (val * col_max) / 100.0
             mask = (df['woreda_name'] == woreda) & (df['year'] == sel_year) & (df['quarter'] == sel_q)
             if mask.any():
-                df.loc[mask, col_key] = val
+                df.loc[mask, col_key] = weighted_val
                 df.loc[mask, 'last_updated'] = datetime.now().strftime('%Y-%m-%d %H:%M')
             else:
                 # Fallback: create row if missing (should be handled by init_data_file, but just in case)
-                new_row = {'woreda_name': woreda, 'year': sel_year, 'quarter': sel_q, col_key: val}
+                new_row = {'woreda_name': woreda, 'year': sel_year, 'quarter': sel_q, col_key: weighted_val}
                 df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
         
         save_data(df)
@@ -1162,6 +1246,8 @@ def render_edit_view():
             mask = (df['woreda_name'] == woreda) & (df['year'] == sel_year) & (df['quarter'] == sel_q)
             row = df[mask]
             cur = float(row[col_key].iloc[0]) if not row.empty else 0.0
+            # Convert to percentage out of 100
+            cur_pct = min((cur * 100.0 / col_max) if col_max > 0 else 0.0, 100.0)
             bg  = '#f8fafc' if i % 2 == 0 else '#ffffff'
             c1, c2 = st.columns([3, 2])
             with c1:
@@ -1172,19 +1258,33 @@ def render_edit_view():
                     <span style="color:#2d3748;font-weight:600;">{woreda}</span>
                 </div>""", unsafe_allow_html=True)
             with c2:
-                inputs[woreda] = st.number_input(
-                    f"sa_{i}", min_value=0.0, max_value=float(col_max),
-                    value=cur, step=0.5, key=f"sa_{col_key}_{i}", label_visibility="collapsed")
+                st.markdown(f'<div style="background:{bg};border-bottom:2px solid #cbd5e0;border-right:2px solid #cbd5e0;border-left:2px solid #cbd5e0;padding:4px 8px;min-height:52px;display:flex;flex-direction:column;justify-content:center;">', unsafe_allow_html=True)
+                raw_val = st.number_input(
+                    f"sa_{i}", min_value=0.0, max_value=None,
+                    value=cur_pct, step=1.0, key=f"sa_{col_key}_{i}", label_visibility="collapsed")
+                inputs[woreda] = raw_val
+                if raw_val > 100.0:
+                    st.markdown('<p style="color:#e53e3e; font-size:0.8rem; font-weight:700; margin:4px 0 0 0;">Please Enter value <=100</p>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+        # Determine if any input is invalid (> 100.0) to disable Save button
+        any_invalid = any(val > 100.0 for val in inputs.values())
 
         _, btn_col, _ = st.columns([1, 2, 1])
         with btn_col:
-            saved = st.form_submit_button(f"💾  Save {chosen_label}", use_container_width=True, type="primary")
+            saved = st.form_submit_button(
+                f"💾  Save {chosen_label}", 
+                use_container_width=True, 
+                type="primary",
+                disabled=any_invalid
+            )
 
-    if saved:
+    if saved and not any_invalid:
         for woreda, val in inputs.items():
+            weighted_val = (val * col_max) / 100.0
             mask = (df['woreda_name'] == woreda) & (df['year'] == sel_year) & (df['quarter'] == sel_q)
             if mask.any():
-                df.loc[mask, col_key] = val
+                df.loc[mask, col_key] = weighted_val
                 df.loc[mask, 'last_updated'] = datetime.now().strftime('%Y-%m-%d %H:%M')
         save_data(df)
         st.success(f"✅ {chosen_label} data updated successfully!")
