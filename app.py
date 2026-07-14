@@ -277,12 +277,24 @@ def verify_user(username: str, password: str):
 # DATA LAYER (Supabase Cloud Storage)
 # ─────────────────────────────────────────────────────────────────────────────
 QUARTERS = [
-    "Q1 (Hamle - Meskerem)",
-    "Q2 (Tikmt - Tahsas)",
-    "Q3 (Tir - Megabit)",
-    "Q4 (Miyazia - Sene)"
+    "Quarter 1",
+    "Quarter 2",
+    "Quarter 3",
+    "Quarter 4"
 ]
 YEARS = ["2016", "2017", "2018", "2019", "2020", "2021"]
+
+def normalize_quarter(q: str) -> str:
+    q_str = str(q).strip()
+    if "Q1" in q_str or "Quarter 1" in q_str:
+        return "Quarter 1"
+    if "Q2" in q_str or "Quarter 2" in q_str:
+        return "Quarter 2"
+    if "Q3" in q_str or "Quarter 3" in q_str:
+        return "Quarter 3"
+    if "Q4" in q_str or "Quarter 4" in q_str:
+        return "Quarter 4"
+    return q_str
 
 def get_db_connection():
     """Get Supabase connection with credentials provided by the user."""
@@ -363,7 +375,7 @@ def cleanup_df(df: pd.DataFrame) -> pd.DataFrame:
     # 2. Standardize core column types
     df['woreda_name'] = df['woreda_name'].astype(str).str.strip()
     df['year']        = df['year'].astype(str).str.strip()
-    df['quarter']     = df['quarter'].astype(str).str.strip()
+    df['quarter']     = df['quarter'].astype(str).str.strip().apply(normalize_quarter)
     
     # 3. Add and cast indicators
     for ind in INDICATORS:
@@ -587,9 +599,9 @@ def login_page():
                     st.session_state.view      = 'Data Entry' if user['role'] == 'Dept Head' else 'Dashboard'
                     # Set defaults if not present
                     if 'filter_year' not in st.session_state:
-                         st.session_state.filter_year = "2018"
+                         st.session_state.filter_year = "Select"
                     if 'filter_quarter' not in st.session_state:
-                         st.session_state.filter_quarter = QUARTERS[2] # Q3
+                         st.session_state.filter_quarter = "Select"
                     st.rerun()
                 else:
                     st.error("❌ Invalid username or password.")
@@ -639,11 +651,18 @@ def render_sidebar():
                 📅 Global Filters
             </div>""", unsafe_allow_html=True)
             
-            y_idx = YEARS.index(st.session_state.filter_year) if st.session_state.filter_year in YEARS else 2
-            st.session_state.filter_year = st.selectbox("Year (EFY)", YEARS, index=y_idx)
+            if 'filter_year' not in st.session_state:
+                st.session_state.filter_year = "Select"
+            if 'filter_quarter' not in st.session_state:
+                st.session_state.filter_quarter = "Select"
+
+            year_opts = ["Select"] + YEARS
+            y_idx = year_opts.index(st.session_state.filter_year) if st.session_state.filter_year in year_opts else 0
+            st.session_state.filter_year = st.selectbox("Year (EFY)", year_opts, index=y_idx, key="sb_filter_year")
             
-            q_idx = QUARTERS.index(st.session_state.filter_quarter) if st.session_state.filter_quarter in QUARTERS else 2
-            st.session_state.filter_quarter = st.selectbox("Quarter", QUARTERS, index=q_idx)
+            quarter_opts = ["Select"] + QUARTERS
+            q_idx = quarter_opts.index(st.session_state.filter_quarter) if st.session_state.filter_quarter in quarter_opts else 0
+            st.session_state.filter_quarter = st.selectbox("Quarter", quarter_opts, index=q_idx, key="sb_filter_quarter")
             
             st.markdown("---")
 
@@ -693,6 +712,32 @@ def dept_head_view():
     page_header(f"📝 {dept_name} — Data Entry",
                 f"Logged in as: {username}  |  Department: {dept_name}")
 
+    # ── BLINKING WARNING NOTICE ───────────────────────────────────────────────
+    st.markdown("""
+    <style>
+    @keyframes blinker { 50% { opacity: 0; } }
+    .blinking-warning {
+        background-color: #ffebeb;
+        border: 4px dashed #ff0000;
+        color: #ff0000;
+        padding: 16px;
+        text-align: center;
+        font-size: 1.3rem;
+        font-weight: 900;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.15);
+    }
+    .blinking-warning span {
+        animation: blinker 1s linear infinite;
+        display: inline-block;
+    }
+    </style>
+    <div class="blinking-warning">
+        <span>⚠️ YOU SHOULD ENTER DATA FROM 100%</span>
+    </div>
+    """, unsafe_allow_html=True)
+
     df = load_data()
     if df is None or not isinstance(df, pd.DataFrame) or 'woreda_name' not in df.columns:
         st.error("❌ Data structure is invalid. Please contact the administrator.")
@@ -705,13 +750,29 @@ def dept_head_view():
             📅 Select Evaluation Period:
         </p>
     </div>""", unsafe_allow_html=True)
+
+    if 'entry_year' not in st.session_state:
+        st.session_state.entry_year = st.session_state.get('filter_year', 'Select')
+    if 'entry_quarter' not in st.session_state:
+        st.session_state.entry_quarter = st.session_state.get('filter_quarter', 'Select')
+
     per_c1, per_c2 = st.columns(2)
     with per_c1:
-        y_idx = YEARS.index(st.session_state.get('filter_year', "2018")) if st.session_state.get('filter_year') in YEARS else 2
-        sel_year = st.selectbox("Year (EFY)", YEARS, index=y_idx, key="entry_year")
+        year_opts = ["Select"] + YEARS
+        y_idx = year_opts.index(st.session_state.entry_year) if st.session_state.entry_year in year_opts else 0
+        sel_year = st.selectbox("Year (EFY)", year_opts, index=y_idx, key="sel_entry_year")
+        st.session_state.entry_year = sel_year
+        st.session_state.filter_year = sel_year
     with per_c2:
-        q_idx = QUARTERS.index(st.session_state.get('filter_quarter', QUARTERS[2])) if st.session_state.get('filter_quarter') in QUARTERS else 2
-        sel_q = st.selectbox("Quarter", QUARTERS, index=q_idx, key="entry_quarter")
+        quarter_opts = ["Select"] + QUARTERS
+        q_idx = quarter_opts.index(st.session_state.entry_quarter) if st.session_state.entry_quarter in quarter_opts else 0
+        sel_q = st.selectbox("Quarter", quarter_opts, index=q_idx, key="sel_entry_quarter")
+        st.session_state.entry_quarter = sel_q
+        st.session_state.filter_quarter = sel_q
+
+    if sel_year == "Select" or sel_q == "Select":
+        st.info("📅 Please select both Year and Quarter to proceed with data entry.")
+        return
 
 
     # ── DROPDOWN: pick which data element to enter (shown only if >1 element) ──
@@ -803,15 +864,10 @@ def dept_head_view():
                     <span style="color:#0a1628;font-weight:800;font-size:1rem;">{woreda.upper()}</span>
                 </div>""", unsafe_allow_html=True)
             with c_inp:
-                st.markdown(f'<div style="background:{bg};border-bottom:2px solid #cbd5e0;border-right:2px solid #cbd5e0;border-left:2px solid #cbd5e0;padding:4px 8px;min-height:58px;display:flex;flex-direction:column;justify-content:center;">', unsafe_allow_html=True)
-                raw_val = st.number_input(
+                inputs[woreda] = st.number_input(
                     f"s{i}", min_value=0.0, max_value=None,
-                    value=min(current_vals[woreda], 100.0), step=1.0,
+                    value=current_vals[woreda], step=1.0,
                     key=f"di_{col_key}_{i}", label_visibility="collapsed")
-                inputs[woreda] = raw_val
-                if raw_val > 100.0:
-                    st.markdown('<p style="color:#e53e3e; font-size:0.8rem; font-weight:700; margin:4px 0 0 0;">Please Enter value <=100</p>', unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
 
         total_inp = sum(inputs.values())
         average   = total_inp / len(WOREDAS)
@@ -821,24 +877,25 @@ def dept_head_view():
                     border:3px solid #0c4a6e;
                     border-radius:0 0 12px 12px;padding:16px 20px;margin-bottom:20px;">
             <span style="color:#0c4a6e;font-weight:900;font-size:1.1rem;">
-                📊 ZONE TOTAL: <span style="font-size:1.3rem;">{total_inp:.1f}</span> / {len(WOREDAS)*100:.0f}
+                📊 ZONE TOTAL: <span style="font-size:1.3rem;">{total_inp:.1f}%</span>
                 &nbsp;&nbsp;|&nbsp;&nbsp; AVERAGE SCORE: <span style="font-size:1.3rem;">{average:.2f}%</span>
             </span>
         </div>""", unsafe_allow_html=True)
 
-        # Determine if any input is invalid (> 100.0) to disable Save button
-        any_invalid = any(val > 100.0 for val in inputs.values())
+        # Show warning if any value > 100 but do NOT disable the save button
+        has_large_val = any(v > 100.0 for v in inputs.values())
+        if has_large_val:
+            st.warning("⚠️ Warning: You have entered a value greater than 100% for one or more Woredas. You can still save this data.")
 
         _, btn_col, _ = st.columns([1, 2, 1])
         with btn_col:
             save = st.form_submit_button(
-                f"💾  Save {col_label} Data", 
-                use_container_width=True, 
-                type="primary",
-                disabled=any_invalid
+                f"💾  Save {col_label} Data",
+                use_container_width=True,
+                type="primary"
             )
 
-    if save and not any_invalid:
+    if save:
         for woreda, val in inputs.items():
             # Convert user out-of-100 input to weighted score
             weighted_val = (val * col_max) / 100.0
@@ -1231,13 +1288,45 @@ def render_full_table_readonly(df: pd.DataFrame):
 # ─────────────────────────────────────────────────────────────────────────────
 def render_edit_view():
     page_header("✏️ Edit Performance Data", "Super Admin — Full Edit Access")
+
+    # ── BLINKING WARNING NOTICE ───────────────────────────────────────────────
+    st.markdown("""
+    <style>
+    @keyframes blinker { 50% { opacity: 0; } }
+    .blinking-warning {
+        background-color: #ffebeb;
+        border: 4px dashed #ff0000;
+        color: #ff0000;
+        padding: 16px;
+        text-align: center;
+        font-size: 1.3rem;
+        font-weight: 900;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.15);
+    }
+    .blinking-warning span {
+        animation: blinker 1s linear infinite;
+        display: inline-block;
+    }
+    </style>
+    <div class="blinking-warning">
+        <span>⚠️ YOU SHOULD ENTER DATA FROM 100%</span>
+    </div>
+    """, unsafe_allow_html=True)
+
     df = load_data()
     if df.empty and 'woreda_name' not in df.columns:
         st.error("❌ Database connection error (KeyError). Performance data could not be loaded.")
         return
-    sel_year = st.session_state.get('filter_year', "2018")
-    sel_q    = st.session_state.get('filter_quarter', QUARTERS[2])
-    
+
+    sel_year = st.session_state.get('filter_year', "Select")
+    sel_q    = st.session_state.get('filter_quarter', "Select")
+
+    if sel_year == "Select" or sel_q == "Select":
+        st.info("📅 Please select both Year and Quarter in the sidebar filters to edit data.")
+        return
+
     st.markdown(f"#### 📅 Period: {sel_year} {sel_q}")
 
     dept_labels = [i['label'] for i in INDICATORS]
@@ -1250,7 +1339,7 @@ def render_edit_view():
     <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;
                 padding:11px 16px;margin-bottom:18px;">
         ⚠️ <strong>Super Admin Edit Mode</strong> — Editing:
-        <strong>{chosen_label}</strong> &nbsp;(Max per Woreda: <strong>{col_max}</strong>)
+        <strong>{chosen_label}</strong> &nbsp;(Enter by Weight: 0 – <strong>{col_max}</strong> per Woreda)
     </div>""", unsafe_allow_html=True)
 
     with st.form(f"sa_form_{col_key}"):
@@ -1258,9 +1347,8 @@ def render_edit_view():
         for i, woreda in enumerate(WOREDAS):
             mask = (df['woreda_name'] == woreda) & (df['year'] == sel_year) & (df['quarter'] == sel_q)
             row = df[mask]
+            # Super Admin enters the raw weighted score directly (0 to col_max)
             cur = float(row[col_key].iloc[0]) if not row.empty else 0.0
-            # Convert to percentage out of 100
-            cur_pct = min((cur * 100.0 / col_max) if col_max > 0 else 0.0, 100.0)
             bg  = '#f8fafc' if i % 2 == 0 else '#ffffff'
             c1, c2 = st.columns([3, 2])
             with c1:
@@ -1271,33 +1359,23 @@ def render_edit_view():
                     <span style="color:#2d3748;font-weight:600;">{woreda}</span>
                 </div>""", unsafe_allow_html=True)
             with c2:
-                st.markdown(f'<div style="background:{bg};border-bottom:2px solid #cbd5e0;border-right:2px solid #cbd5e0;border-left:2px solid #cbd5e0;padding:4px 8px;min-height:52px;display:flex;flex-direction:column;justify-content:center;">', unsafe_allow_html=True)
-                raw_val = st.number_input(
-                    f"sa_{i}", min_value=0.0, max_value=None,
-                    value=cur_pct, step=1.0, key=f"sa_{col_key}_{i}", label_visibility="collapsed")
-                inputs[woreda] = raw_val
-                if raw_val > 100.0:
-                    st.markdown('<p style="color:#e53e3e; font-size:0.8rem; font-weight:700; margin:4px 0 0 0;">Please Enter value <=100</p>', unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-
-        # Determine if any input is invalid (> 100.0) to disable Save button
-        any_invalid = any(val > 100.0 for val in inputs.values())
+                inputs[woreda] = st.number_input(
+                    f"sa_{i}", min_value=0.0, max_value=float(col_max),
+                    value=cur, step=0.5, key=f"sa_{col_key}_{i}", label_visibility="collapsed")
 
         _, btn_col, _ = st.columns([1, 2, 1])
         with btn_col:
             saved = st.form_submit_button(
-                f"💾  Save {chosen_label}", 
-                use_container_width=True, 
-                type="primary",
-                disabled=any_invalid
+                f"💾  Save {chosen_label}",
+                use_container_width=True,
+                type="primary"
             )
 
-    if saved and not any_invalid:
+    if saved:
         for woreda, val in inputs.items():
-            weighted_val = (val * col_max) / 100.0
             mask = (df['woreda_name'] == woreda) & (df['year'] == sel_year) & (df['quarter'] == sel_q)
             if mask.any():
-                df.loc[mask, col_key] = weighted_val
+                df.loc[mask, col_key] = val
                 df.loc[mask, 'last_updated'] = datetime.now().strftime('%Y-%m-%d %H:%M')
         save_data(df)
         st.success(f"✅ {chosen_label} data updated successfully!")
@@ -1317,9 +1395,13 @@ def dashboard_view():
     if df.empty and 'woreda_name' not in df.columns:
         st.error("❌ Database connection error (KeyError). Dashboard could not be loaded.")
         return
-    sel_year = st.session_state.get('filter_year', "2018")
-    sel_q    = st.session_state.get('filter_quarter', QUARTERS[2])
-    
+    sel_year = st.session_state.get('filter_year', "Select")
+    sel_q    = st.session_state.get('filter_quarter', "Select")
+
+    if sel_year == "Select" or sel_q == "Select":
+        st.info("📅 Please select both Year and Quarter in the sidebar filters to view the dashboard.")
+        return
+
     # Filter by period
     df = df[(df['year'] == sel_year) & (df['quarter'] == sel_q)].copy()
     if df.empty:
